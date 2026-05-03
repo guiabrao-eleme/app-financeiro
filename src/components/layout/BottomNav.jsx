@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
+
 const tabs = [
   {
     id: 'dashboard',
@@ -35,22 +38,67 @@ const tabs = [
 ]
 
 export default function BottomNav({ active, onChange }) {
+  const tabRefs = useRef([])
+  const containerRef = useRef(null)
+  const [indicatorBounds, setIndicatorBounds] = useState({ left: 0, width: 0 })
+
+  useEffect(() => {
+    const activeIndex = tabs.findIndex(t => t.id === active)
+    const el = tabRefs.current[activeIndex]
+    const container = containerRef.current
+    if (!el || !container) return
+
+    const elRect = el.getBoundingClientRect()
+    const containerRect = container.getBoundingClientRect()
+
+    setIndicatorBounds({
+      left: elRect.left - containerRect.left,
+      width: elRect.width,
+    })
+  }, [active])
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex items-center justify-around px-2 pb-safe z-40"
-      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
-      {tabs.map(tab => (
-        <button
-          key={tab.id}
-          onClick={() => onChange(tab.id)}
-          className={`flex flex-col items-center gap-1 py-2 px-5 rounded-2xl transition-colors
-            ${active === tab.id ? 'text-primary' : 'text-slate-400'}`}
-        >
-          {tab.icon(active === tab.id)}
-          <span className={`text-[10px] font-medium ${active === tab.id ? 'text-primary' : 'text-slate-400'}`}>
-            {tab.label}
-          </span>
-        </button>
-      ))}
+    <nav
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-40"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div ref={containerRef} className="relative flex items-center justify-around px-3 py-1">
+
+        {/* Indicador deslizante */}
+        {indicatorBounds.width > 0 && (
+          <motion.div
+            className="absolute top-1 bottom-1 bg-primary rounded-2xl z-0"
+            initial={false}
+            animate={{
+              left: indicatorBounds.left,
+              width: indicatorBounds.width,
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 400,
+              damping: 32,
+            }}
+          />
+        )}
+
+        {tabs.map((tab, index) => {
+          const isActive = active === tab.id
+          return (
+            <button
+              key={tab.id}
+              ref={el => { tabRefs.current[index] = el }}
+              onClick={() => onChange(tab.id)}
+              className={`relative z-10 flex flex-col items-center gap-0.5 py-2.5 px-5 rounded-2xl transition-colors duration-200
+                ${isActive ? 'text-white' : 'text-slate-400'}`}
+            >
+              {tab.icon(isActive)}
+              <span className={`text-[10px] font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                {tab.label}
+              </span>
+            </button>
+          )
+        })}
+      </div>
     </nav>
   )
 }

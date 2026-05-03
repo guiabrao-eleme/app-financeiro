@@ -14,20 +14,20 @@ export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToTo
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
 
   return (
-    <header className="bg-primary text-white shadow-md relative overflow-hidden">
-      {/* Foto do casal como fundo sutil */}
-      {!photoError && (
-        <img
-          src={COUPLE_PHOTO}
-          alt=""
-          onError={() => setPhotoError(true)}
-          className="absolute inset-0 w-full h-full object-cover opacity-20 select-none pointer-events-none"
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Gradiente para legibilidade */}
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/60 via-primary/80 to-primary pointer-events-none" />
+    <header className="bg-primary text-white shadow-md relative">
+      {/* Fundo com overflow-hidden isolado para não cortar dropdowns */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        {!photoError && (
+          <img
+            src={COUPLE_PHOTO}
+            alt=""
+            onError={() => setPhotoError(true)}
+            className="w-full h-full object-cover opacity-20 select-none"
+          />
+        )}
+        {/* Gradiente para legibilidade */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/60 via-primary/80 to-primary" />
+      </div>
 
       {/* Conteúdo */}
       <div className="relative px-4 pt-10 pb-5">
