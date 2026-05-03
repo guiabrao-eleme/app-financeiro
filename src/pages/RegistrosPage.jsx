@@ -385,7 +385,7 @@ export default function RegistrosPage({ showModal }) {
       <ToastContainer />
 
       {/* Header */}
-      <div className="bg-primary text-white px-4 pt-10 pb-4 shadow-md flex-shrink-0">
+      <div className="bg-primary text-white px-4 pt-safe pb-4 shadow-md flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold">Registros</h1>
           <div className="flex items-center gap-2">

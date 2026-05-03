@@ -324,7 +324,7 @@ export default function ResumoAnualPage() {
   return (
     <div className="min-h-screen bg-background pb-24 page-enter">
       {/* Header */}
-      <div className="bg-primary text-white px-4 pt-10 pb-5 shadow-md">
+      <div className="bg-primary text-white px-4 pt-safe pb-5 shadow-md">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold">Resumo Anual</h1>
           {hasAnyData && (
