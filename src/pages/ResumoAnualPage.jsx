@@ -8,14 +8,22 @@ import { downloadCSV, formatCSVCurrency } from '../utils/csv'
 const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const MONTH_FULL   = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
-const CATEGORIES = ['Casa','Carro','Faculdade','Saídas','Outros']
-const CAT_ICONS  = { Casa:'🏠', Carro:'🚗', Faculdade:'🎓', Saídas:'🛍️', Outros:'📦' }
+const CATEGORIES = ['Casa','Carro','Faculdade','Saídas','Salário','Bolsa','Comissão','BB da Sorte','Outros']
+const CAT_ICONS  = {
+  Casa:'🏠', Carro:'🚗', Faculdade:'🎓', 'Saídas':'🛍️',
+  'Salário':'💰', 'Bolsa':'📚', 'Comissão':'💼', 'BB da Sorte':'🍀',
+  Outros:'📦'
+}
 const CAT_COLORS = {
-  Casa:      'bg-blue-400',
-  Carro:     'bg-orange-400',
-  Faculdade: 'bg-purple-400',
-  Saídas:    'bg-pink-400',
-  Outros:    'bg-slate-400',
+  Casa:         'bg-blue-400',
+  Carro:        'bg-orange-400',
+  Faculdade:    'bg-purple-400',
+  'Saídas':     'bg-pink-400',
+  'Salário':    'bg-emerald-400',
+  'Bolsa':      'bg-sky-400',
+  'Comissão':   'bg-amber-400',
+  'BB da Sorte':'bg-green-400',
+  Outros:       'bg-slate-400',
 }
 
 // ─── Gráfico de linha SVG ────────────────────────────────────────────────────

@@ -9,22 +9,33 @@ import MonthYearPicker from '../components/ui/MonthYearPicker'
 import { downloadCSV, formatCSVCurrency } from '../utils/csv'
 
 const CATEGORY_META = {
-  Casa:       { icon: '🏠', color: 'bg-blue-100 text-blue-700' },
-  Carro:      { icon: '🚗', color: 'bg-orange-100 text-orange-700' },
-  Faculdade:  { icon: '🎓', color: 'bg-purple-100 text-purple-700' },
-  Saídas:     { icon: '🛍️', color: 'bg-pink-100 text-pink-700' },
-  Outros:     { icon: '📦', color: 'bg-slate-100 text-slate-600' },
+  // Saídas
+  Casa:         { icon: '🏠', color: 'bg-blue-100 text-blue-700' },
+  Carro:        { icon: '🚗', color: 'bg-orange-100 text-orange-700' },
+  Faculdade:    { icon: '🎓', color: 'bg-purple-100 text-purple-700' },
+  'Saídas':     { icon: '🛍️', color: 'bg-pink-100 text-pink-700' },
+  // Entradas
+  'Salário':    { icon: '💰', color: 'bg-emerald-100 text-emerald-700' },
+  'Bolsa':      { icon: '📚', color: 'bg-sky-100 text-sky-700' },
+  'Comissão':   { icon: '💼', color: 'bg-amber-100 text-amber-700' },
+  'BB da Sorte':{ icon: '🍀', color: 'bg-green-100 text-green-700' },
+  // Genérico
+  Outros:       { icon: '📦', color: 'bg-slate-100 text-slate-600' },
 }
 
 const CHIPS = [
-  { id: 'todos',     label: 'Todos' },
-  { id: 'Entrada',   label: 'Entradas' },
-  { id: 'Saída',     label: 'Só Saídas' },
-  { id: 'Casa',      label: 'Casa' },
-  { id: 'Carro',     label: 'Carro' },
-  { id: 'Faculdade', label: 'Faculdade' },
-  { id: 'Saídas',    label: 'Saídas' },
-  { id: 'Outros',    label: 'Outros' },
+  { id: 'todos',      label: 'Todos' },
+  { id: 'Entrada',    label: 'Entradas' },
+  { id: 'Saída',      label: 'Só Saídas' },
+  { id: 'Casa',       label: 'Casa' },
+  { id: 'Carro',      label: 'Carro' },
+  { id: 'Faculdade',  label: 'Faculdade' },
+  { id: 'Salário',    label: 'Salário' },
+  { id: 'Bolsa',      label: 'Bolsa' },
+  { id: 'Comissão',   label: 'Comissão' },
+  { id: 'BB da Sorte',label: 'BB da Sorte' },
+  { id: 'Saídas',     label: 'Saídas' },
+  { id: 'Outros',     label: 'Outros' },
 ]
 
 const SORT_OPTIONS = [
@@ -35,84 +46,6 @@ const SORT_OPTIONS = [
 ]
 
 const PAGE_SIZE = 30
-
-function ConfirmDialog({ descricao, onConfirm, onCancel }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center p-4">
-      <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
-        <h3 className="font-bold text-slate-800 mb-1">Excluir registro?</h3>
-        <p className="text-slate-500 text-sm mb-5 line-clamp-2">"{descricao}"</p>
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-3 rounded-xl bg-danger text-white text-sm font-semibold hover:bg-danger/90 transition-colors"
-          >
-            Excluir
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function LancamentoItem({ item, onEdit, onDelete }) {
-  const meta = CATEGORY_META[item.categoria] ?? CATEGORY_META['Outros']
-  const isEntrada = item.tipo === 'Entrada'
-  const hasParcelas = item.total_parcelas > 1
-
-  return (
-    <div className="flex items-center gap-3 py-3 px-4 bg-white border-b border-slate-50">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg ${meta.color}`}>
-        {meta.icon}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-slate-800 truncate">{item.descricao}</p>
-          {hasParcelas && (
-            <span className="flex-shrink-0 text-[10px] bg-slate-100 text-slate-500 font-semibold px-1.5 py-0.5 rounded-full">
-              {item.parcela_atual}/{item.total_parcelas}
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-slate-400 mt-0.5">{formatDate(item.data_vencimento)}</p>
-      </div>
-
-      <p className={`text-sm font-bold flex-shrink-0 ${isEntrada ? 'text-success' : 'text-danger'}`}>
-        {isEntrada ? '+' : '-'}{formatCurrency(item.valor)}
-      </p>
-
-      {/* Botão editar */}
-      <button
-        onClick={() => onEdit(item)}
-        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
-        aria-label="Editar"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
-
-      {/* Botão excluir */}
-      <button
-        onClick={() => onDelete(item)}
-        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-danger hover:bg-red-50 transition-colors flex-shrink-0"
-        aria-label="Excluir"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
-          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
-    </div>
-  )
-}
 
 function ListSkeleton() {
   return (
@@ -127,6 +60,82 @@ function ListSkeleton() {
           <Skeleton className="h-4 w-16" />
         </div>
       ))}
+    </div>
+  )
+}
+
+function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onToggleSelect }) {
+  const meta = CATEGORY_META[item.categoria] ?? CATEGORY_META['Outros']
+  const isEntrada = item.tipo === 'Entrada'
+  const hasParcelas = item.total_parcelas > 1
+
+  return (
+    <div
+      className={`flex items-center gap-3 py-3 px-4 bg-white border-b border-slate-50 transition-colors
+        ${selectionMode ? 'cursor-pointer active:bg-slate-50' : ''}
+        ${selected ? 'bg-primary/5 border-primary/10' : ''}`}
+      onClick={selectionMode ? () => onToggleSelect(item.id) : undefined}
+    >
+      {/* Checkbox ou ícone */}
+      {selectionMode ? (
+        <div
+          className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
+            ${selected ? 'bg-primary border-primary' : 'border-slate-300 bg-white'}`}
+        >
+          {selected && (
+            <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
+              <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </div>
+      ) : (
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg ${meta.color}`}>
+          {meta.icon}
+        </div>
+      )}
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-slate-800 truncate">{item.descricao}</p>
+          {hasParcelas && (
+            <span className="flex-shrink-0 text-[10px] bg-slate-100 text-slate-500 font-semibold px-1.5 py-0.5 rounded-full">
+              {item.parcela_atual}/{item.total_parcelas}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate-400 mt-0.5">
+          {meta.icon} {item.categoria} · {formatDate(item.data_vencimento)}
+        </p>
+      </div>
+
+      <p className={`text-sm font-bold flex-shrink-0 ${isEntrada ? 'text-success' : 'text-danger'}`}>
+        {isEntrada ? '+' : '-'}{formatCurrency(item.valor)}
+      </p>
+
+      {!selectionMode && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(item) }}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+            aria-label="Editar"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(item) }}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-danger hover:bg-red-50 transition-colors flex-shrink-0"
+            aria-label="Excluir"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
+              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </>
+      )}
     </div>
   )
 }
@@ -146,8 +155,15 @@ export default function RegistrosPage({ showModal }) {
   const [chip, setChip] = useState('todos')
   const [sortBy, setSortBy] = useState('data_desc')
   const [page, setPage] = useState(1)
-  const [toDelete, setToDelete] = useState(null)
   const [editItem, setEditItem] = useState(null)
+
+  // Multi-select
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+
+  // Refs para undo de delete
+  const pendingDeletes = useRef({}) // id → { item, timer }
+
   const loaderRef = useRef(null)
 
   const prevMonth = () => {
@@ -191,6 +207,12 @@ export default function RegistrosPage({ showModal }) {
   useEffect(() => {
     if (!showModal) fetchAll()
   }, [showModal, fetchAll])
+
+  // Sair do modo seleção ao trocar filtros
+  useEffect(() => {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+  }, [search, chip, sortBy, year, month, allMonths])
 
   // Filtragem
   const filtered = allItems.filter(item => {
@@ -236,16 +258,109 @@ export default function RegistrosPage({ showModal }) {
 
   useEffect(() => { setPage(1) }, [search, chip, sortBy, year, month, allMonths])
 
-  const handleDelete = async () => {
-    if (!toDelete) return
-    const { error } = await supabase.from('lancamentos').delete().eq('id', toDelete.id)
-    if (error) {
-      addToast('Erro ao excluir registro.', 'error')
-    } else {
-      setAllItems(prev => prev.filter(i => i.id !== toDelete.id))
-      addToast('Registro excluído.', 'success')
+  // ─── Delete com undo ─────────────────────────────────────────────────────────
+  const softDelete = useCallback((item) => {
+    // Remove da UI imediatamente
+    setAllItems(prev => prev.filter(i => i.id !== item.id))
+    setSelectedIds(prev => { const s = new Set(prev); s.delete(item.id); return s })
+
+    // Cancela timer anterior se existir
+    if (pendingDeletes.current[item.id]) {
+      clearTimeout(pendingDeletes.current[item.id].timer)
     }
-    setToDelete(null)
+
+    const timer = setTimeout(async () => {
+      delete pendingDeletes.current[item.id]
+      await supabase.from('lancamentos').delete().eq('id', item.id)
+    }, 5000)
+
+    pendingDeletes.current[item.id] = { item, timer }
+
+    addToast(
+      `"${item.descricao}" excluído`,
+      'delete',
+      () => {
+        // Undo: cancela timer e restaura item
+        if (pendingDeletes.current[item.id]) {
+          clearTimeout(pendingDeletes.current[item.id].timer)
+          delete pendingDeletes.current[item.id]
+        }
+        setAllItems(prev => {
+          const alreadyExists = prev.find(i => i.id === item.id)
+          if (alreadyExists) return prev
+          return [...prev, item].sort((a, b) => b.data_vencimento.localeCompare(a.data_vencimento))
+        })
+      }
+    )
+  }, [addToast])
+
+  // Delete múltiplos
+  const deleteSelected = useCallback(() => {
+    const toRemove = [...selectedIds]
+    const items = allItems.filter(i => toRemove.includes(i.id))
+
+    // Remove da UI
+    setAllItems(prev => prev.filter(i => !toRemove.includes(i.id)))
+    setSelectedIds(new Set())
+    setSelectionMode(false)
+
+    // Cancela timers existentes
+    toRemove.forEach(id => {
+      if (pendingDeletes.current[id]) {
+        clearTimeout(pendingDeletes.current[id].timer)
+      }
+    })
+
+    const timer = setTimeout(async () => {
+      toRemove.forEach(id => delete pendingDeletes.current[id])
+      await supabase.from('lancamentos').delete().in('id', toRemove)
+    }, 5000)
+
+    // Guarda timer para cada id
+    toRemove.forEach(id => {
+      pendingDeletes.current[id] = { timer }
+    })
+
+    const n = toRemove.length
+    addToast(
+      `${n} ${n === 1 ? 'registro excluído' : 'registros excluídos'}`,
+      'delete',
+      () => {
+        // Undo: cancela timers e restaura itens
+        toRemove.forEach(id => {
+          if (pendingDeletes.current[id]) {
+            clearTimeout(pendingDeletes.current[id].timer)
+            delete pendingDeletes.current[id]
+          }
+        })
+        clearTimeout(timer)
+        setAllItems(prev => {
+          const existing = new Set(prev.map(i => i.id))
+          const toAdd = items.filter(i => !existing.has(i.id))
+          return [...prev, ...toAdd].sort((a, b) => b.data_vencimento.localeCompare(a.data_vencimento))
+        })
+      }
+    )
+  }, [selectedIds, allItems, addToast])
+
+  // Selecionar / desselecionar todos os visíveis
+  const allVisibleSelected = visible.length > 0 && visible.every(i => selectedIds.has(i.id))
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(visible.map(i => i.id)))
+    }
+  }
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const s = new Set(prev)
+      if (s.has(id)) s.delete(id)
+      else s.add(id)
+      return s
+    })
   }
 
   const handleExportCSV = () => {
@@ -363,10 +478,10 @@ export default function RegistrosPage({ showModal }) {
         ))}
       </div>
 
-      {/* Barra de ordenação */}
+      {/* Barra de ordenação + seleção */}
       <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-b border-slate-100 flex-shrink-0">
         <span className="text-xs text-slate-400 flex-shrink-0">Ordenar:</span>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
           {SORT_OPTIONS.map(opt => (
             <button
               key={opt.id}
@@ -380,7 +495,54 @@ export default function RegistrosPage({ showModal }) {
             </button>
           ))}
         </div>
+        {/* Botão modo seleção */}
+        <button
+          onClick={() => {
+            setSelectionMode(v => !v)
+            setSelectedIds(new Set())
+          }}
+          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border
+            ${selectionMode
+              ? 'bg-primary text-white border-primary'
+              : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'}`}
+        >
+          {selectionMode ? 'Cancelar' : 'Selecionar'}
+        </button>
       </div>
+
+      {/* Barra de seleção múltipla */}
+      {selectionMode && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-primary/5 border-b border-primary/10 flex-shrink-0">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 text-sm font-medium text-primary"
+          >
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all
+              ${allVisibleSelected ? 'bg-primary border-primary' : 'border-slate-300 bg-white'}`}>
+              {allVisibleSelected && (
+                <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
+                  <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </div>
+            {allVisibleSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">{selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}</span>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={deleteSelected}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger text-white text-xs font-semibold"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Excluir ({selectedIds.size})
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Lista */}
       <div className="flex-1 overflow-y-auto pb-40">
@@ -407,7 +569,10 @@ export default function RegistrosPage({ showModal }) {
                 key={item.id}
                 item={item}
                 onEdit={setEditItem}
-                onDelete={setToDelete}
+                onDelete={softDelete}
+                selectionMode={selectionMode}
+                selected={selectedIds.has(item.id)}
+                onToggleSelect={toggleSelect}
               />
             ))}
             {hasMore && (
@@ -419,9 +584,9 @@ export default function RegistrosPage({ showModal }) {
         )}
       </div>
 
-      {/* Rodapé totalizador */}
-      {!loading && visible.length > 0 && (
-        <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3 flex items-center justify-between z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      {/* Rodapé totalizador — padding right para não sobrepor o botão + */}
+      {!loading && visible.length > 0 && !selectionMode && (
+        <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-slate-100 pl-4 pr-20 py-3 flex items-center justify-between z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <span className="text-xs text-slate-500">
             {visible.length} {visible.length === 1 ? 'registro' : 'registros'}
           </span>
@@ -430,15 +595,6 @@ export default function RegistrosPage({ showModal }) {
             <p className="text-sm font-bold text-danger">{formatCurrency(totalSaidasVisiveis)}</p>
           </div>
         </div>
-      )}
-
-      {/* Diálogo de exclusão */}
-      {toDelete && (
-        <ConfirmDialog
-          descricao={toDelete.descricao}
-          onConfirm={handleDelete}
-          onCancel={() => setToDelete(null)}
-        />
       )}
 
       {/* Modal de edição */}

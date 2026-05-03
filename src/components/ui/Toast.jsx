@@ -1,32 +1,96 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 
-export function Toast({ message, type = 'success', onClose }) {
+const DURATION = 5000 // 5 segundos
+
+export function Toast({ message, type = 'success', onClose, onUndo }) {
   const [visible, setVisible] = useState(true)
+  const [progress, setProgress] = useState(100)
+  const startRef = useRef(Date.now())
+  const rafRef = useRef(null)
+  const closedRef = useRef(false)
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(false)
-      setTimeout(onClose, 300)
-    }, 3500)
-    return () => clearTimeout(timer)
+  const close = useCallback(() => {
+    if (closedRef.current) return
+    closedRef.current = true
+    setVisible(false)
+    setTimeout(onClose, 300)
   }, [onClose])
 
+  // Barra de progresso animada
+  useEffect(() => {
+    const tick = () => {
+      const elapsed = Date.now() - startRef.current
+      const remaining = Math.max(0, 100 - (elapsed / DURATION) * 100)
+      setProgress(remaining)
+      if (remaining > 0) {
+        rafRef.current = requestAnimationFrame(tick)
+      } else {
+        close()
+      }
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+  }, [close])
+
+  const handleUndo = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    closedRef.current = true
+    onUndo?.()
+    setVisible(false)
+    setTimeout(onClose, 300)
+  }
+
   const colors = {
-    success: 'bg-success text-white',
-    error: 'bg-danger text-white',
-    info: 'bg-primary text-white',
+    success: { bg: 'bg-success', bar: 'bg-white/30' },
+    error:   { bg: 'bg-danger',  bar: 'bg-white/30' },
+    info:    { bg: 'bg-primary', bar: 'bg-white/30' },
+    delete:  { bg: 'bg-slate-800', bar: 'bg-white/20' },
+  }
+  const c = colors[type] ?? colors.success
+
+  const icons = {
+    success: '✓',
+    error:   '✕',
+    info:    'ℹ',
+    delete:  '🗑',
   }
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg max-w-sm
-        transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}
-        ${colors[type]}`}
+      className={`relative overflow-hidden flex items-center gap-3 pl-4 pr-3 pt-3 pb-2 rounded-2xl shadow-xl max-w-sm w-full
+        transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
+        ${c.bg}`}
     >
-      <span className="text-sm font-medium">{message}</span>
-      <button onClick={() => { setVisible(false); setTimeout(onClose, 300) }} className="ml-auto opacity-70 hover:opacity-100">
+      {/* Ícone */}
+      <span className="text-white text-base flex-shrink-0">{icons[type] ?? '✓'}</span>
+
+      {/* Mensagem */}
+      <span className="text-white text-sm font-medium flex-1 leading-tight">{message}</span>
+
+      {/* Botão desfazer */}
+      {onUndo && (
+        <button
+          onClick={handleUndo}
+          className="flex-shrink-0 text-white font-bold text-xs bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          Desfazer
+        </button>
+      )}
+
+      {/* Botão fechar */}
+      <button
+        onClick={close}
+        className="flex-shrink-0 text-white/60 hover:text-white text-sm w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+      >
         ✕
       </button>
+
+      {/* Barra de progresso */}
+      <div className={`absolute bottom-0 left-0 h-1 rounded-full transition-none ${c.bar}`}
+        style={{ width: `${progress}%` }}
+      />
     </div>
   )
 }
@@ -34,22 +98,29 @@ export function Toast({ message, type = 'success', onClose }) {
 export function useToast() {
   const [toasts, setToasts] = useState([])
 
-  const addToast = (message, type = 'success') => {
+  const addToast = useCallback((message, type = 'success', onUndo = null) => {
     const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type }])
-  }
+    setToasts(prev => [...prev, { id, message, type, onUndo }])
+  }, [])
 
-  const removeToast = (id) => {
+  const removeToast = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id))
-  }
+  }, [])
 
-  const ToastContainer = () => (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
+  const ToastContainer = useCallback(() => (
+    <div className="fixed bottom-24 left-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
       {toasts.map(toast => (
-        <Toast key={toast.id} message={toast.message} type={toast.type} onClose={() => removeToast(toast.id)} />
+        <div key={toast.id} className="pointer-events-auto">
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onUndo={toast.onUndo}
+            onClose={() => removeToast(toast.id)}
+          />
+        </div>
       ))}
     </div>
-  )
+  ), [toasts, removeToast])
 
   return { addToast, ToastContainer }
 }

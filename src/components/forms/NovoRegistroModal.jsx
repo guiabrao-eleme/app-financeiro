@@ -5,12 +5,20 @@ import { formatCurrency } from '../../utils/format'
 import { useToast } from '../ui/Toast'
 import CurrencyInput from './CurrencyInput'
 
-const CATEGORIAS = [
+const CATEGORIAS_SAIDA = [
   { id: 'Casa',       icon: '🏠' },
   { id: 'Carro',      icon: '🚗' },
   { id: 'Faculdade',  icon: '🎓' },
   { id: 'Saídas',     icon: '🛍️' },
   { id: 'Outros',     icon: '📦' },
+]
+
+const CATEGORIAS_ENTRADA = [
+  { id: 'Salário',     icon: '💰' },
+  { id: 'Bolsa',       icon: '📚' },
+  { id: 'Comissão',    icon: '💼' },
+  { id: 'BB da Sorte', icon: '🍀' },
+  { id: 'Outros',      icon: '📦' },
 ]
 
 const todayStr = () => new Date().toISOString().split('T')[0]
@@ -217,7 +225,7 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
               {['Entrada', 'Saída'].map(tipo => (
                 <button
                   key={tipo}
-                  onClick={() => { set('tipo', tipo); set('parcelas', 1) }}
+                  onClick={() => { set('tipo', tipo); set('parcelas', 1); set('categoria', '') }}
                   className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all
                     ${form.tipo === tipo
                       ? tipo === 'Entrada'
@@ -278,7 +286,7 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Categoria</label>
             <div className="grid grid-cols-5 gap-2">
-              {CATEGORIAS.map(({ id, icon }) => (
+              {(form.tipo === 'Entrada' ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA).map(({ id, icon }) => (
                 <button
                   key={id}
                   onClick={() => set('categoria', id)}

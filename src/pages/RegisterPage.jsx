@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/ui/Toast'
 
@@ -79,7 +79,7 @@ export default function RegisterPage({ onNavigateToLogin }) {
         <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
           <span className="text-white font-bold text-xl">R$</span>
         </div>
-        <h1 className="text-2xl font-bold text-primary">Finança Fácil</h1>
+        <h1 className="text-2xl font-bold text-primary">GuiGabi Finanças</h1>
         <p className="text-slate-500 text-sm mt-1">Controle financeiro do casal</p>
       </div>
 

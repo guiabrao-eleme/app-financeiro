@@ -7,13 +7,15 @@ import SummaryCards from '../components/dashboard/SummaryCards'
 import CategoryChart from '../components/dashboard/CategoryChart'
 import CategoryTable from '../components/dashboard/CategoryTable'
 
-const CATEGORIES = ['Casa', 'Carro', 'Faculdade', 'Saídas', 'Outros']
+const CATEGORIES_SAIDA = ['Casa', 'Carro', 'Faculdade', 'Saídas', 'Outros']
+const CATEGORIES_ENTRADA = ['Salário', 'Bolsa', 'Comissão', 'BB da Sorte', 'Outros']
+const ALL_CATEGORIES = [...new Set([...CATEGORIES_SAIDA, ...CATEGORIES_ENTRADA])]
 
 function buildCategoryData(lancamentos) {
   const data = {}
-  CATEGORIES.forEach(cat => { data[cat] = { entradas: 0, saidas: 0 } })
+  ALL_CATEGORIES.forEach(cat => { data[cat] = { entradas: 0, saidas: 0 } })
   lancamentos.forEach(l => {
-    if (!data[l.categoria]) return
+    if (!data[l.categoria]) data[l.categoria] = { entradas: 0, saidas: 0 }
     if (l.tipo === 'Entrada') data[l.categoria].entradas += Number(l.valor)
     else data[l.categoria].saidas += Number(l.valor)
   })

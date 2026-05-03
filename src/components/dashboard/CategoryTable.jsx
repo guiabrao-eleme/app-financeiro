@@ -1,21 +1,17 @@
 import { formatCurrency } from '../../utils/format'
 import { Skeleton } from '../ui/Skeleton'
 
-const CATEGORIES = ['Casa', 'Carro', 'Faculdade', 'Saídas', 'Outros']
-
 const ICONS = {
-  Casa: '🏠',
-  Carro: '🚗',
-  Faculdade: '🎓',
-  Saídas: '🛍️',
+  Casa: '🏠', Carro: '🚗', Faculdade: '🎓', 'Saídas': '🛍️',
+  'Salário': '💰', 'Bolsa': '📚', 'Comissão': '💼', 'BB da Sorte': '🍀',
   Outros: '📦',
 }
 
 export default function CategoryTable({ data, totalSaidas, loading }) {
   if (loading) return <Skeleton className="h-44 mx-4" />
 
-  const rows = CATEGORIES
-    .map(cat => ({ cat, value: data[cat]?.saidas ?? 0 }))
+  const rows = Object.entries(data)
+    .map(([cat, vals]) => ({ cat, value: vals?.saidas ?? 0 }))
     .filter(r => r.value > 0)
     .sort((a, b) => b.value - a.value)
 
@@ -33,7 +29,7 @@ export default function CategoryTable({ data, totalSaidas, loading }) {
             <div key={cat}>
               <div className="flex items-center justify-between mb-1">
                 <span className="flex items-center gap-2 text-sm text-slate-700">
-                  <span>{ICONS[cat]}</span>
+                  <span>{ICONS[cat] ?? '📦'}</span>
                   {cat}
                 </span>
                 <div className="text-right">
