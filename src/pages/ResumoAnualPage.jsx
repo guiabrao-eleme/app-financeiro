@@ -4,27 +4,17 @@ import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency } from '../utils/format'
 import { Skeleton } from '../components/ui/Skeleton'
 import { downloadCSV, formatCSVCurrency } from '../utils/csv'
+import { useCategories, getCatMeta } from '../hooks/useCategories'
 
 const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const MONTH_FULL   = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
-const CATEGORIES = ['Casa','Carro','Faculdade','Saídas','Salário','Bolsa','Comissão','BB da Sorte','Outros']
-const CAT_ICONS  = {
-  Casa:'🏠', Carro:'🚗', Faculdade:'🎓', 'Saídas':'🛍️',
-  'Salário':'💰', 'Bolsa':'📚', 'Comissão':'💼', 'BB da Sorte':'🍀',
-  Outros:'📦'
-}
-const CAT_COLORS = {
-  Casa:         'bg-blue-400',
-  Carro:        'bg-orange-400',
-  Faculdade:    'bg-purple-400',
-  'Saídas':     'bg-pink-400',
-  'Salário':    'bg-emerald-400',
-  'Bolsa':      'bg-sky-400',
-  'Comissão':   'bg-amber-400',
-  'BB da Sorte':'bg-green-400',
-  Outros:       'bg-slate-400',
-}
+// Cores para as barras de categoria no resumo anual (índice rotativo)
+const BAR_COLORS = [
+  'bg-blue-400','bg-orange-400','bg-purple-400','bg-pink-400',
+  'bg-emerald-400','bg-sky-400','bg-amber-400','bg-green-400',
+  'bg-rose-400','bg-indigo-400','bg-teal-400','bg-cyan-400',
+]
 
 // ─── Gráfico de linha SVG ────────────────────────────────────────────────────
 
@@ -205,12 +195,13 @@ function MonthlyTable({ monthlyData, currentYear }) {
 
 // ─── Breakdown por categoria ─────────────────────────────────────────────────
 
-function CategoryBreakdown({ categoryData }) {
-  const totalSaidas = CATEGORIES.reduce((s, c) => s + (categoryData[c]?.saidas ?? 0), 0)
-  const rows = CATEGORIES
-    .map(cat => ({ cat, value: categoryData[cat]?.saidas ?? 0 }))
+function CategoryBreakdown({ categoryData, categories }) {
+  const rows = Object.entries(categoryData)
+    .map(([cat, vals]) => ({ cat, value: vals?.saidas ?? 0 }))
     .filter(r => r.value > 0)
     .sort((a, b) => b.value - a.value)
+
+  const totalSaidas = rows.reduce((s, r) => s + r.value, 0)
 
   if (rows.length === 0) return null
 
@@ -218,13 +209,15 @@ function CategoryBreakdown({ categoryData }) {
     <div className="mx-4 bg-white rounded-2xl border border-slate-100 p-4">
       <h3 className="text-sm font-semibold text-slate-700 mb-4">Saídas por categoria no ano</h3>
       <div className="space-y-3.5">
-        {rows.map(({ cat, value }) => {
+        {rows.map(({ cat, value }, idx) => {
           const pct = totalSaidas > 0 ? (value / totalSaidas) * 100 : 0
+          const meta = getCatMeta(cat, categories)
+          const barColor = BAR_COLORS[idx % BAR_COLORS.length]
           return (
             <div key={cat}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="flex items-center gap-2 text-sm text-slate-700">
-                  <span>{CAT_ICONS[cat]}</span> {cat}
+                  <span>{meta.icon}</span> {cat}
                 </span>
                 <div className="text-right">
                   <span className="text-sm font-semibold text-danger">{formatCurrency(value)}</span>
@@ -233,7 +226,7 @@ function CategoryBreakdown({ categoryData }) {
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ${CAT_COLORS[cat] ?? 'bg-slate-400'}`}
+                  className={`h-full rounded-full transition-all duration-700 ${barColor}`}
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -261,6 +254,7 @@ function PageSkeleton() {
 
 export default function ResumoAnualPage() {
   const { user } = useAuth()
+  const { categories } = useCategories()
   const [year, setYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
   const [monthlyData, setMonthlyData] = useState(
@@ -296,17 +290,17 @@ export default function ResumoAnualPage() {
       // Agrupa por mês
       const byMonth = Array.from({ length: 12 }, () => ({ entradas: 0, saidas: 0 }))
       const byCat = {}
-      CATEGORIES.forEach(c => { byCat[c] = { entradas: 0, saidas: 0 } })
 
       data.forEach(l => {
         const m = parseInt(l.data_vencimento.split('-')[1]) - 1
         const v = Number(l.valor)
+        if (!byCat[l.categoria]) byCat[l.categoria] = { entradas: 0, saidas: 0 }
         if (l.tipo === 'Entrada') {
           byMonth[m].entradas += v
-          if (byCat[l.categoria]) byCat[l.categoria].entradas += v
+          byCat[l.categoria].entradas += v
         } else {
           byMonth[m].saidas += v
-          if (byCat[l.categoria]) byCat[l.categoria].saidas += v
+          byCat[l.categoria].saidas += v
         }
       })
 
@@ -376,7 +370,7 @@ export default function ResumoAnualPage() {
         <div className="space-y-3 py-4">
           <LineChart monthlyData={monthlyData} />
           <MonthlyTable monthlyData={monthlyData} currentYear={year} />
-          <CategoryBreakdown categoryData={categoryData} />
+          <CategoryBreakdown categoryData={categoryData} categories={categories} />
         </div>
       )}
     </div>

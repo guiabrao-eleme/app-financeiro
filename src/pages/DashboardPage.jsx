@@ -6,14 +6,10 @@ import Header from '../components/layout/Header'
 import SummaryCards from '../components/dashboard/SummaryCards'
 import CategoryChart from '../components/dashboard/CategoryChart'
 import CategoryTable from '../components/dashboard/CategoryTable'
-
-const CATEGORIES_SAIDA = ['Casa', 'Carro', 'Faculdade', 'Saídas', 'Outros']
-const CATEGORIES_ENTRADA = ['Salário', 'Bolsa', 'Comissão', 'BB da Sorte', 'Outros']
-const ALL_CATEGORIES = [...new Set([...CATEGORIES_SAIDA, ...CATEGORIES_ENTRADA])]
+import { useCategories } from '../hooks/useCategories'
 
 function buildCategoryData(lancamentos) {
   const data = {}
-  ALL_CATEGORIES.forEach(cat => { data[cat] = { entradas: 0, saidas: 0 } })
   lancamentos.forEach(l => {
     if (!data[l.categoria]) data[l.categoria] = { entradas: 0, saidas: 0 }
     if (l.tipo === 'Entrada') data[l.categoria].entradas += Number(l.valor)
@@ -24,6 +20,7 @@ function buildCategoryData(lancamentos) {
 
 export default function DashboardPage({ showModal }) {
   const { user } = useAuth()
+  const { categories } = useCategories()
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
@@ -80,8 +77,8 @@ export default function DashboardPage({ showModal }) {
 
       {!loading && lancamentos.length > 0 && (
         <div className="space-y-3">
-          <CategoryChart data={categoryData} loading={loading} />
-          <CategoryTable data={categoryData} totalSaidas={saidas} loading={loading} />
+          <CategoryChart data={categoryData} loading={loading} categories={categories} />
+          <CategoryTable data={categoryData} totalSaidas={saidas} loading={loading} categories={categories} />
         </div>
       )}
 

@@ -7,42 +7,19 @@ import { Skeleton } from '../components/ui/Skeleton'
 import NovoRegistroModal from '../components/forms/NovoRegistroModal'
 import MonthYearPicker from '../components/ui/MonthYearPicker'
 import { downloadCSV, formatCSVCurrency } from '../utils/csv'
-
-const CATEGORY_META = {
-  // Saídas
-  Casa:         { icon: '🏠', color: 'bg-blue-100 text-blue-700' },
-  Carro:        { icon: '🚗', color: 'bg-orange-100 text-orange-700' },
-  Faculdade:    { icon: '🎓', color: 'bg-purple-100 text-purple-700' },
-  'Saídas':     { icon: '🛍️', color: 'bg-pink-100 text-pink-700' },
-  // Entradas
-  'Salário':    { icon: '💰', color: 'bg-emerald-100 text-emerald-700' },
-  'Bolsa':      { icon: '📚', color: 'bg-sky-100 text-sky-700' },
-  'Comissão':   { icon: '💼', color: 'bg-amber-100 text-amber-700' },
-  'BB da Sorte':{ icon: '🍀', color: 'bg-green-100 text-green-700' },
-  // Genérico
-  Outros:       { icon: '📦', color: 'bg-slate-100 text-slate-600' },
-}
-
-const CHIPS = [
-  { id: 'todos',      label: 'Todos' },
-  { id: 'Entrada',    label: 'Entradas' },
-  { id: 'Saída',      label: 'Só Saídas' },
-  { id: 'Casa',       label: 'Casa' },
-  { id: 'Carro',      label: 'Carro' },
-  { id: 'Faculdade',  label: 'Faculdade' },
-  { id: 'Salário',    label: 'Salário' },
-  { id: 'Bolsa',      label: 'Bolsa' },
-  { id: 'Comissão',   label: 'Comissão' },
-  { id: 'BB da Sorte',label: 'BB da Sorte' },
-  { id: 'Saídas',     label: 'Saídas' },
-  { id: 'Outros',     label: 'Outros' },
-]
+import { useCategories, getCatMeta } from '../hooks/useCategories'
 
 const SORT_OPTIONS = [
   { id: 'data_desc',  label: '↓ Mais novo' },
   { id: 'data_asc',   label: '↑ Mais antigo' },
   { id: 'valor_desc', label: '↓ Maior valor' },
   { id: 'valor_asc',  label: '↑ Menor valor' },
+]
+
+const CHIPS_FIXOS = [
+  { id: 'todos',   label: 'Todos' },
+  { id: 'Entrada', label: 'Entradas' },
+  { id: 'Saída',   label: 'Só Saídas' },
 ]
 
 const PAGE_SIZE = 30
@@ -64,8 +41,8 @@ function ListSkeleton() {
   )
 }
 
-function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onToggleSelect }) {
-  const meta = CATEGORY_META[item.categoria] ?? CATEGORY_META['Outros']
+function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onToggleSelect, categories }) {
+  const meta = getCatMeta(item.categoria, categories)
   const isEntrada = item.tipo === 'Entrada'
   const hasParcelas = item.total_parcelas > 1
 
@@ -93,6 +70,7 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
           {meta.icon}
         </div>
       )}
+
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -143,6 +121,13 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
 export default function RegistrosPage({ showModal }) {
   const { user } = useAuth()
   const { addToast, ToastContainer } = useToast()
+  const { categories } = useCategories()
+
+  // Chips dinâmicos: fixos + categorias do usuário
+  const chips = [
+    ...CHIPS_FIXOS,
+    ...categories.map(c => ({ id: c.nome, label: c.nome })),
+  ]
 
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -464,7 +449,7 @@ export default function RegistrosPage({ showModal }) {
 
       {/* Chips de filtro */}
       <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-none flex-shrink-0 bg-white border-b border-slate-100">
-        {CHIPS.map(c => (
+        {chips.map(c => (
           <button
             key={c.id}
             onClick={() => setChip(c.id)}
@@ -573,6 +558,7 @@ export default function RegistrosPage({ showModal }) {
                 selectionMode={selectionMode}
                 selected={selectedIds.has(item.id)}
                 onToggleSelect={toggleSelect}
+                categories={categories}
               />
             ))}
             {hasMore && (

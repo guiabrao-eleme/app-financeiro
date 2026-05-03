@@ -1,13 +1,8 @@
 import { formatCurrency } from '../../utils/format'
 import { Skeleton } from '../ui/Skeleton'
+import { getCatMeta } from '../../hooks/useCategories'
 
-const ICONS = {
-  Casa: '🏠', Carro: '🚗', Faculdade: '🎓', 'Saídas': '🛍️',
-  'Salário': '💰', 'Bolsa': '📚', 'Comissão': '💼', 'BB da Sorte': '🍀',
-  Outros: '📦',
-}
-
-export default function CategoryTable({ data, totalSaidas, loading }) {
+export default function CategoryTable({ data, totalSaidas, loading, categories = [] }) {
   if (loading) return <Skeleton className="h-44 mx-4" />
 
   const rows = Object.entries(data)
@@ -24,12 +19,13 @@ export default function CategoryTable({ data, totalSaidas, loading }) {
       <div className="space-y-3">
         {rows.map(({ cat, value }) => {
           const pct = totalSaidas > 0 ? (value / totalSaidas) * 100 : 0
+          const meta = getCatMeta(cat, categories)
 
           return (
             <div key={cat}>
               <div className="flex items-center justify-between mb-1">
                 <span className="flex items-center gap-2 text-sm text-slate-700">
-                  <span>{ICONS[cat] ?? '📦'}</span>
+                  <span>{meta.icon}</span>
                   {cat}
                 </span>
                 <div className="text-right">

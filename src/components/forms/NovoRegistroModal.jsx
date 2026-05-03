@@ -1,24 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatCurrency } from '../../utils/format'
 import { useToast } from '../ui/Toast'
 import CurrencyInput from './CurrencyInput'
+import { useCategories, CAT_COLORS } from '../../hooks/useCategories'
 
-const CATEGORIAS_SAIDA = [
-  { id: 'Casa',       icon: '🏠' },
-  { id: 'Carro',      icon: '🚗' },
-  { id: 'Faculdade',  icon: '🎓' },
-  { id: 'Saídas',     icon: '🛍️' },
-  { id: 'Outros',     icon: '📦' },
-]
-
-const CATEGORIAS_ENTRADA = [
-  { id: 'Salário',     icon: '💰' },
-  { id: 'Bolsa',       icon: '📚' },
-  { id: 'Comissão',    icon: '💼' },
-  { id: 'BB da Sorte', icon: '🍀' },
-  { id: 'Outros',      icon: '📦' },
+// Emojis sugeridos para facilitar a escolha
+const EMOJIS_SUGERIDOS = [
+  '🏠','🚗','🎓','🛍️','💰','📚','💼','🍀','🍕','✈️',
+  '🏥','💊','🎮','🎬','🐕','🎂','💄','👗','👟','💻',
+  '📱','🎵','🌮','🍔','🛒','⚽','🎁','💡','🔧','🎯',
+  '🏋️','🌟','☕','🍷','🏖️','📦','💸','🎪','🎨','🔑',
 ]
 
 const todayStr = () => new Date().toISOString().split('T')[0]
@@ -38,21 +31,98 @@ const EMPTY_FORM = {
   parcelas: 1,
 }
 
-// editItem: objeto lancamento existente (modo edição) ou null (modo criação)
+function NewCategoryForm({ tipo, onCreated, onCancel }) {
+  const [nome, setNome] = useState('')
+  const [icone, setIcone] = useState('📦')
+  const [saving, setSaving] = useState(false)
+  const { createCategory } = useCategories()
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }, [])
+
+  const handleSave = async () => {
+    if (!nome.trim()) return
+    setSaving(true)
+    const catTipo = tipo === 'Entrada' ? 'Entrada' : 'Saída'
+    const { data, error } = await createCategory({ nome, icone, tipo: catTipo })
+    setSaving(false)
+    if (!error && data) onCreated(data.nome)
+  }
+
+  return (
+    <div className="mt-3 bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nova categoria</p>
+
+      {/* Grade de emojis */}
+      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+        {EMOJIS_SUGERIDOS.map(e => (
+          <button
+            key={e}
+            type="button"
+            onClick={() => setIcone(e)}
+            className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all
+              ${icone === e ? 'bg-primary/15 ring-2 ring-primary scale-110' : 'bg-white border border-slate-200 hover:bg-slate-100'}`}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+
+      {/* Emoji personalizado */}
+      <div className="flex items-center gap-2">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-xl flex-shrink-0">
+          {icone}
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={nome}
+          onChange={e => setNome(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSave()}
+          placeholder="Nome da categoria..."
+          maxLength={30}
+          className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-medium"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!nome.trim() || saving}
+          className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50"
+        >
+          {saving ? 'Salvando...' : 'Criar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function NovoRegistroModal({ open, onClose, onSaved, editItem = null }) {
   const { user } = useAuth()
   const { addToast, ToastContainer } = useToast()
+  const { categories, loading: catsLoading, deleteCategory } = useCategories()
   const isEdit = !!editItem
 
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [visible, setVisible] = useState(false)
+  const [creating, setCreating] = useState(false)
 
   // Animação de entrada/saída + trava scroll do body (fix iOS)
   useEffect(() => {
     if (open) {
-      // Salva posição atual e trava o fundo
       const scrollY = window.scrollY
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
@@ -60,7 +130,6 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
       document.body.style.overflowY = 'scroll'
       setTimeout(() => setVisible(true), 10)
     } else {
-      // Restaura scroll do fundo na posição exata
       const scrollY = parseInt(document.body.style.top || '0') * -1
       document.body.style.position = ''
       document.body.style.top = ''
@@ -93,9 +162,15 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
       setForm({ ...EMPTY_FORM, data: todayStr() })
     }
     setErrors({})
+    setCreating(false)
   }, [open, isEdit, editItem])
 
   if (!open) return null
+
+  // Filtra categorias pelo tipo atual
+  const catsParaTipo = categories.filter(
+    c => c.tipo === form.tipo || c.tipo === 'Ambos'
+  )
 
   const validate = () => {
     const errs = {}
@@ -113,7 +188,6 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
     setSaving(true)
     try {
       if (isEdit) {
-        // Modo edição: UPDATE no registro existente
         const { error } = await supabase
           .from('lancamentos')
           .update({
@@ -124,14 +198,11 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
             valor: form.valor,
           })
           .eq('id', editItem.id)
-
         if (error) throw error
-        addToast('Registro atualizado com sucesso!', 'success')
+        addToast('Registro atualizado!', 'success')
       } else {
-        // Modo criação: INSERT (com suporte a parcelas)
         const parcelas = form.tipo === 'Saída' ? form.parcelas : 1
         const valorParcela = parseFloat((form.valor / parcelas).toFixed(2))
-
         const registros = Array.from({ length: parcelas }, (_, i) => ({
           user_id: user.id,
           data_registro: form.data,
@@ -144,18 +215,13 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
           total_parcelas: parcelas,
           valor_total: form.valor,
         }))
-
         const { error } = await supabase.from('lancamentos').insert(registros)
         if (error) throw error
-
         addToast(
-          parcelas > 1
-            ? `${parcelas} parcelas registradas com sucesso!`
-            : 'Registro salvo com sucesso!',
+          parcelas > 1 ? `${parcelas} parcelas registradas!` : 'Registro salvo!',
           'success'
         )
       }
-
       setTimeout(() => { onSaved(); handleClose() }, 1000)
     } catch {
       addToast('Erro ao salvar. Tente novamente.', 'error')
@@ -166,12 +232,21 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
 
   const handleClose = () => {
     setVisible(false)
+    setCreating(false)
     setTimeout(onClose, 280)
   }
 
   const set = (field, val) => {
     setForm(prev => ({ ...prev, [field]: val }))
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  const handleDeleteCat = async (e, id) => {
+    e.stopPropagation()
+    await deleteCategory(id)
+    if (categories.find(c => c.id === id)?.nome === form.categoria) {
+      set('categoria', '')
+    }
   }
 
   const valorParcela = form.parcelas > 1 ? form.valor / form.parcelas : 0
@@ -225,6 +300,7 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
               {['Entrada', 'Saída'].map(tipo => (
                 <button
                   key={tipo}
+                  type="button"
                   onClick={() => { set('tipo', tipo); set('parcelas', 1); set('categoria', '') }}
                   className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all
                     ${form.tipo === tipo
@@ -250,12 +326,11 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
                 value={form.data}
                 onChange={e => set('data', e.target.value)}
                 className={`flex-1 px-4 py-3 rounded-xl border text-sm outline-none transition-all
-                  ${errors.data
-                    ? 'border-danger bg-red-50'
-                    : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
+                  ${errors.data ? 'border-danger bg-red-50' : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
               />
               {!isEdit && (
                 <button
+                  type="button"
                   onClick={() => set('data', todayStr())}
                   className="px-4 py-3 rounded-xl border border-slate-200 text-sm text-primary font-medium hover:bg-primary/5 transition-colors whitespace-nowrap"
                 >
@@ -275,9 +350,7 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
               onChange={e => set('descricao', e.target.value)}
               placeholder="Ex: Mercado, Salário, Conta de luz..."
               className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all
-                ${errors.descricao
-                  ? 'border-danger bg-red-50'
-                  : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
+                ${errors.descricao ? 'border-danger bg-red-50' : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
             />
             {errors.descricao && <p className="text-danger text-xs mt-1">{errors.descricao}</p>}
           </div>
@@ -285,22 +358,80 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
           {/* Categoria */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Categoria</label>
-            <div className="grid grid-cols-5 gap-2">
-              {(form.tipo === 'Entrada' ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA).map(({ id, icon }) => (
+
+            {catsLoading ? (
+              <div className="h-20 flex items-center justify-center text-slate-400 text-sm">Carregando categorias...</div>
+            ) : catsParaTipo.length === 0 && !creating ? (
+              /* Estado vazio — nenhuma categoria criada ainda */
+              <div className="text-center py-4 text-slate-400 text-sm">
+                <p className="mb-3">Nenhuma categoria ainda.</p>
                 <button
-                  key={id}
-                  onClick={() => set('categoria', id)}
-                  className={`flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-medium transition-all
-                    ${form.categoria === id
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                  type="button"
+                  onClick={() => setCreating(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary font-semibold text-sm"
                 >
-                  <span className="text-xl">{icon}</span>
-                  <span className="text-[10px] leading-tight">{id}</span>
+                  <span className="text-lg">＋</span> Criar primeira categoria
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {catsParaTipo.map(cat => {
+                  const color = CAT_COLORS[cat.cor % CAT_COLORS.length]
+                  const isSelected = form.categoria === cat.nome
+                  return (
+                    <div key={cat.id} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => set('categoria', cat.nome)}
+                        className={`w-full flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border text-xs font-medium transition-all
+                          ${isSelected
+                            ? 'border-primary bg-primary/5 text-primary ring-2 ring-primary/20'
+                            : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
+                      >
+                        <span className="text-2xl">{cat.icone}</span>
+                        <span className="text-[11px] leading-tight text-center line-clamp-2">{cat.nome}</span>
+                      </button>
+                      {/* Botão deletar — aparece no hover */}
+                      <button
+                        type="button"
+                        onClick={e => handleDeleteCat(e, cat.id)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-danger text-white rounded-full text-[10px] font-bold
+                          opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-sm z-10"
+                        title="Remover categoria"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )
+                })}
+
+                {/* Botão adicionar nova */}
+                {!creating && (
+                  <button
+                    type="button"
+                    onClick={() => setCreating(true)}
+                    className="flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-primary hover:text-primary transition-all"
+                  >
+                    <span className="text-2xl">＋</span>
+                    <span className="text-[11px] leading-tight">Nova</span>
+                  </button>
+                )}
+              </div>
+            )}
+
             {errors.categoria && <p className="text-danger text-xs mt-1">{errors.categoria}</p>}
+
+            {/* Formulário inline de nova categoria */}
+            {creating && (
+              <NewCategoryForm
+                tipo={form.tipo}
+                onCreated={(nome) => {
+                  set('categoria', nome)
+                  setCreating(false)
+                }}
+                onCancel={() => setCreating(false)}
+              />
+            )}
           </div>
 
           {/* Valor */}
@@ -322,6 +453,7 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
               <label className="block text-sm font-medium text-slate-700 mb-2">Parcelas</label>
               <div className="flex items-center gap-3">
                 <button
+                  type="button"
                   onClick={() => set('parcelas', Math.max(1, form.parcelas - 1))}
                   className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg text-slate-600 hover:bg-slate-50 active:scale-95 transition-all"
                 >
@@ -332,21 +464,19 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
                   <span className="text-slate-400 text-sm ml-1">× de 48</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => set('parcelas', Math.min(48, form.parcelas + 1))}
                   className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg text-slate-600 hover:bg-slate-50 active:scale-95 transition-all"
                 >
                   +
                 </button>
               </div>
-
               {form.parcelas > 1 && form.valor > 0 && (
                 <div className="mt-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
                   <p className="text-primary text-sm font-medium">
                     {formatCurrency(valorParcela)} por mês durante {form.parcelas} meses
                   </p>
-                  <p className="text-primary/60 text-xs mt-0.5">
-                    Total: {formatCurrency(form.valor)}
-                  </p>
+                  <p className="text-primary/60 text-xs mt-0.5">Total: {formatCurrency(form.valor)}</p>
                 </div>
               )}
             </div>
@@ -354,14 +484,13 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
 
           {/* Botão salvar */}
           <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
             className="w-full bg-primary text-white py-4 rounded-xl font-semibold text-sm
               hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {saving
-              ? (isEdit ? 'Salvando...' : 'Salvando...')
-              : (isEdit ? 'Salvar alterações' : 'Salvar registro')}
+            {saving ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Salvar registro'}
           </button>
         </div>
       </div>
