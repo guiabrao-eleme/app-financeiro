@@ -41,10 +41,32 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
   const [saving, setSaving] = useState(false)
   const [visible, setVisible] = useState(false)
 
-  // Animação de entrada/saída
+  // Animação de entrada/saída + trava scroll do body (fix iOS)
   useEffect(() => {
-    if (open) setTimeout(() => setVisible(true), 10)
-    else setVisible(false)
+    if (open) {
+      // Salva posição atual e trava o fundo
+      const scrollY = window.scrollY
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.overflowY = 'scroll'
+      setTimeout(() => setVisible(true), 10)
+    } else {
+      // Restaura scroll do fundo na posição exata
+      const scrollY = parseInt(document.body.style.top || '0') * -1
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflowY = ''
+      window.scrollTo(0, scrollY)
+      setVisible(false)
+    }
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflowY = ''
+    }
   }, [open])
 
   // Inicializa form ao abrir
