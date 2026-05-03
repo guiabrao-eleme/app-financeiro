@@ -17,18 +17,23 @@ export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToTo
   const now = new Date()
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
 
-  // Carrega avatar: prioridade → metadados Supabase (sincronizado), fallback → localStorage
+  // Carrega avatar ao montar/trocar usuário
   useEffect(() => {
     if (!user) return
-    const metaUrl = user?.user_metadata?.avatar_url
-    if (metaUrl) {
-      // Adiciona cache-bust para forçar reload ao trocar foto
-      setAvatar(metaUrl + (metaUrl.includes('?') ? '&' : '?') + 'cb=' + (user?.user_metadata?.avatar_updated ?? ''))
-      return
-    }
-    // Fallback: localStorage (dispositivo atual, sem sincronização)
+
+    // 1. Mostra localStorage imediatamente (sem esperar rede)
     const local = localStorage.getItem(`avatar_${user.id}`)
     if (local) setAvatar(local)
+
+    // 2. Verifica metadados do Supabase (fonte autoritativa, sincronizada)
+    const metaUrl = user?.user_metadata?.avatar_url
+    if (metaUrl) {
+      const ts = user?.user_metadata?.avatar_updated ?? ''
+      const urlFinal = metaUrl + (metaUrl.includes('?') ? '&' : '?') + 'cb=' + ts
+      setAvatar(urlFinal)
+      // Mantém localStorage sincronizado
+      localStorage.setItem(`avatar_${user.id}`, metaUrl)
+    }
   }, [user])
 
   const handleAvatarClick = () => {
@@ -77,6 +82,10 @@ export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToTo
 
             // Salva URL nos metadados do usuário (sincroniza em todos os dispositivos)
             await updateUserMeta({ avatar_url: publicUrl, avatar_updated: timestamp })
+
+            // Força refresh do token em cache — sem isso, a próxima página
+            // carregaria os metadados antigos do JWT em localStorage
+            await supabase.auth.refreshSession()
 
             // Atualiza localmente com cache-bust
             setAvatar(publicUrl + '?cb=' + timestamp)

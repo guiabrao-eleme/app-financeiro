@@ -24,7 +24,8 @@
       "Bash(git commit -m 'feat: favicon e logo personalizados + fundo capa nas telas de auth *)",
       "Bash(git commit -m 'fix: safe area iPhone, botão + acima do nav, favicon correto, avatar por usuário *)",
       "Bash(git commit -m 'feat: categorias 100% dinâmicas por usuário \\(Supabase\\) *)",
-      "Bash(git commit -m 'feat: avatar sincronizado via Supabase Storage + user_metadata *)"
+      "Bash(git commit -m 'feat: avatar sincronizado via Supabase Storage + user_metadata *)",
+      "Bash(git commit -m 'fix: avatar persiste após refresh via refreshSession\\(\\) *)"
     ]
   }
 }
