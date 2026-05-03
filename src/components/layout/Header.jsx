@@ -1,56 +1,102 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 import MonthYearPicker from '../ui/MonthYearPicker'
 
 const COUPLE_PHOTO = '/foto-casal.jpg'
 
 export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToToday, onChangeMonth }) {
-  const { user, signOut } = useAuth()
+  const { user, signOut, updateUserMeta } = useAuth()
   const name = user?.user_metadata?.full_name || user?.email || 'Usuário'
   const firstName = name.split(' ')[0]
   const [photoError, setPhotoError] = useState(false)
   const [avatar, setAvatar] = useState(null)
+  const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
 
   const now = new Date()
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
 
-  // Carrega avatar salvo no localStorage
+  // Carrega avatar: prioridade → metadados Supabase (sincronizado), fallback → localStorage
   useEffect(() => {
     if (!user) return
-    const saved = localStorage.getItem(`avatar_${user.id}`)
-    if (saved) setAvatar(saved)
+    const metaUrl = user?.user_metadata?.avatar_url
+    if (metaUrl) {
+      // Adiciona cache-bust para forçar reload ao trocar foto
+      setAvatar(metaUrl + (metaUrl.includes('?') ? '&' : '?') + 'cb=' + (user?.user_metadata?.avatar_updated ?? ''))
+      return
+    }
+    // Fallback: localStorage (dispositivo atual, sem sincronização)
+    const local = localStorage.getItem(`avatar_${user.id}`)
+    if (local) setAvatar(local)
   }, [user])
 
   const handleAvatarClick = () => {
-    fileInputRef.current?.click()
+    if (!uploading) fileInputRef.current?.click()
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
+
+    setUploading(true)
 
     const reader = new FileReader()
     reader.onload = (ev) => {
       const img = new Image()
-      img.onload = () => {
-        // Redimensiona para 200x200 com corte centralizado (cover)
+      img.onload = async () => {
+        // Redimensiona para 300x300 centralizado
         const canvas = document.createElement('canvas')
-        canvas.width = 200
-        canvas.height = 200
+        canvas.width = 300
+        canvas.height = 300
         const ctx = canvas.getContext('2d')
         const size = Math.min(img.width, img.height)
         const sx = (img.width - size) / 2
         const sy = (img.height - size) / 2
-        ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
-        setAvatar(dataUrl)
-        localStorage.setItem(`avatar_${user.id}`, dataUrl)
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 300, 300)
+
+        canvas.toBlob(async (blob) => {
+          try {
+            const filePath = `${user.id}/avatar.jpg`
+
+            // Upload para o Supabase Storage (upsert = sobrescreve se já existir)
+            const { error: uploadError } = await supabase.storage
+              .from('avatars')
+              .upload(filePath, blob, { contentType: 'image/jpeg', upsert: true })
+
+            if (uploadError) throw uploadError
+
+            // Pega a URL pública
+            const { data: urlData } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(filePath)
+
+            const publicUrl = urlData.publicUrl
+            const timestamp = Date.now().toString()
+
+            // Salva URL nos metadados do usuário (sincroniza em todos os dispositivos)
+            await updateUserMeta({ avatar_url: publicUrl, avatar_updated: timestamp })
+
+            // Atualiza localmente com cache-bust
+            setAvatar(publicUrl + '?cb=' + timestamp)
+            // Guarda no localStorage como cache offline
+            localStorage.setItem(`avatar_${user.id}`, publicUrl)
+
+          } catch (err) {
+            console.error('Erro ao fazer upload da foto:', err)
+            // Fallback: salva só no localStorage se o Storage falhar
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+            setAvatar(dataUrl)
+            localStorage.setItem(`avatar_${user.id}`, dataUrl)
+          } finally {
+            setUploading(false)
+          }
+        }, 'image/jpeg', 0.85)
       }
       img.src = ev.target.result
     }
     reader.readAsDataURL(file)
-    e.target.value = '' // permite selecionar o mesmo arquivo novamente
   }
 
   return (
@@ -85,9 +131,15 @@ export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToTo
             {/* Avatar — toque para trocar foto */}
             <button
               onClick={handleAvatarClick}
-              className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/40 flex-shrink-0 bg-white/10 active:scale-95 transition-transform"
+              className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/40 flex-shrink-0 bg-white/10 active:scale-95 transition-transform"
               title="Toque para trocar sua foto"
             >
+              {/* Spinner enquanto faz upload */}
+              {uploading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
               {avatar ? (
                 <img src={avatar} alt="Minha foto" className="w-full h-full object-cover" />
               ) : !photoError ? (
