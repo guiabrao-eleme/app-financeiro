@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import RegistrosPage from './pages/RegistrosPage'
 import ResumoAnualPage from './pages/ResumoAnualPage'
+import ObservacoesPage from './pages/ObservacoesPage'
 import BottomNav from './components/layout/BottomNav'
 import NovoRegistroModal from './components/forms/NovoRegistroModal'
 
@@ -45,6 +46,8 @@ function AppRouter() {
         return <RegistrosPage showModal={showModal} />
       case 'anual':
         return <ResumoAnualPage />
+      case 'observacoes':
+        return <ObservacoesPage />
       default:
         return (
           <DashboardPage
@@ -55,7 +58,7 @@ function AppRouter() {
     }
   }
 
-  const navPage = ['dashboard', 'registros', 'anual'].includes(appPage) ? appPage : 'dashboard'
+  const navPage = ['dashboard', 'registros', 'anual', 'observacoes'].includes(appPage) ? appPage : 'dashboard'
 
   return (
     <div>

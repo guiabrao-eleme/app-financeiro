@@ -18,9 +18,11 @@ const SORT_OPTIONS = [
 ]
 
 const CHIPS_FIXOS = [
-  { id: 'todos',   label: 'Todos' },
-  { id: 'Entrada', label: 'Entradas' },
-  { id: 'Saída',   label: 'Só Saídas' },
+  { id: 'todos',       label: 'Todos' },
+  { id: 'Entrada',     label: 'Entradas' },
+  { id: 'Saída',       label: 'Só Saídas' },
+  { id: 'recorrentes', label: '🔄 Recorrentes' },
+  { id: 'parcelados',  label: '💳 Parcelados' },
 ]
 
 const PAGE_SIZE = 30
@@ -226,9 +228,11 @@ export default function RegistrosPage({ showModal }) {
       item.descricao.toLowerCase().includes(search.toLowerCase()) ||
       item.categoria.toLowerCase().includes(search.toLowerCase())
     const matchChip =
-      chip === 'todos'   ? true :
-      chip === 'Entrada' ? item.tipo === 'Entrada' :
-      chip === 'Saída'   ? item.tipo === 'Saída' :
+      chip === 'todos'       ? true :
+      chip === 'Entrada'     ? item.tipo === 'Entrada' :
+      chip === 'Saída'       ? item.tipo === 'Saída' :
+      chip === 'recorrentes' ? item.tipo_repeticao === 'recorrente' :
+      chip === 'parcelados'  ? item.tipo_repeticao === 'parcelado' :
       item.categoria === chip
     return matchSearch && matchChip
   })

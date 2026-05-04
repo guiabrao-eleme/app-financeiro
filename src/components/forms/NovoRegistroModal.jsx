@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { formatCurrency } from '../../utils/format'
 import { useToast } from '../ui/Toast'
 import CurrencyInput from './CurrencyInput'
-import { useCategories, CAT_COLORS } from '../../hooks/useCategories'
+import { useCategories } from '../../hooks/useCategories'
 
 const EMOJIS_SUGERIDOS = [
   '🏠','🚗','🎓','🛍️','💰','📚','💼','🍀','🍕','✈️',
@@ -21,6 +21,9 @@ const addMonths = (dateStr, months) => {
   return d.toISOString().split('T')[0]
 }
 
+// 10 anos como limite prático para "sem prazo"
+const MESES_INFINITO = 120
+
 const EMPTY_FORM = {
   data: todayStr(),
   descricao: '',
@@ -28,11 +31,11 @@ const EMPTY_FORM = {
   categoria: '',
   valor: 0,
   repeticao: 'unico',   // 'unico' | 'recorrente' | 'parcelado'
-  meses: 2,
+  meses: 12,
+  infinito: false,       // true = sem prazo definido (120 meses)
 }
 
 // ─── Formulário de nova categoria ────────────────────────────────────────────
-// createCategory vem do pai — ambos compartilham a mesma instância do hook
 function NewCategoryForm({ tipo, onCreated, onCancel, createCategory }) {
   const [nome, setNome] = useState('')
   const [icone, setIcone] = useState('📦')
@@ -95,12 +98,63 @@ function NewCategoryForm({ tipo, onCreated, onCancel, createCategory }) {
   )
 }
 
+// ─── Stepper de meses com input direto ───────────────────────────────────────
+function MesesStepper({ value, onChange, disabled }) {
+  const [editing, setEditing] = useState(false)
+  const [raw, setRaw] = useState('')
+  const inputRef = useRef(null)
+
+  const startEdit = () => {
+    if (disabled) return
+    setRaw(String(value))
+    setEditing(true)
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select() }, 50)
+  }
+
+  const commitEdit = () => {
+    const n = parseInt(raw, 10)
+    if (!isNaN(n)) onChange(Math.max(2, Math.min(600, n)))
+    setEditing(false)
+  }
+
+  return (
+    <div className={`flex items-center gap-3 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+      <button type="button"
+        onClick={() => onChange(Math.max(2, value - 1))}
+        className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">
+        −
+      </button>
+
+      <div className="flex-1 text-center" onClick={startEdit}>
+        {editing ? (
+          <input
+            ref={inputRef}
+            type="number"
+            inputMode="numeric"
+            value={raw}
+            onChange={e => setRaw(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitEdit() } }}
+            className="w-20 text-center text-2xl font-bold text-slate-800 outline-none bg-transparent border-b-2 border-primary"
+          />
+        ) : (
+          <span className="text-2xl font-bold text-slate-800 cursor-pointer border-b-2 border-transparent hover:border-slate-300 transition-all">
+            {value}
+          </span>
+        )}
+        <span className="text-slate-400 text-sm ml-1">meses</span>
+      </div>
+
+      <button type="button"
+        onClick={() => onChange(Math.min(600, value + 1))}
+        className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">
+        +
+      </button>
+    </div>
+  )
+}
+
 // ─── Modal principal ──────────────────────────────────────────────────────────
-/**
- * editEscopo: 'apenas_este' | 'este_e_proximos'
- *   — vem do RegistrosPage após o usuário escolher o escopo no RecorrenciaEscopoSheet
- *   — só é relevante quando editItem.grupo_recorrente está definido
- */
 export default function NovoRegistroModal({
   open,
   onClose,
@@ -110,7 +164,6 @@ export default function NovoRegistroModal({
 }) {
   const { user } = useAuth()
   const { addToast, ToastContainer } = useToast()
-  // Uma única instância do hook — compartilhada com NewCategoryForm via prop
   const { categories, loading: catsLoading, deleteCategory, createCategory } = useCategories()
   const isEdit = !!editItem
 
@@ -156,7 +209,8 @@ export default function NovoRegistroModal({
         categoria: editItem.categoria,
         valor: Number(editItem.valor),
         repeticao: 'unico',
-        meses: 2,
+        meses: 12,
+        infinito: false,
       })
     } else {
       setForm({ ...EMPTY_FORM, data: todayStr() })
@@ -187,7 +241,6 @@ export default function NovoRegistroModal({
       if (isEdit) {
         // ── Modo edição ───────────────────────────────────────────────────────
         if (editEscopo === 'este_e_proximos' && editItem.grupo_recorrente) {
-          // 1. Atualiza campos comuns em todos os registros futuros do grupo
           const { error: bulkError } = await supabase
             .from('lancamentos')
             .update({
@@ -198,20 +251,16 @@ export default function NovoRegistroModal({
             })
             .eq('grupo_recorrente', editItem.grupo_recorrente)
             .gte('data_vencimento', editItem.data_vencimento)
-
           if (bulkError) throw bulkError
 
-          // 2. Atualiza a data apenas neste registro específico
           const { error: dateError } = await supabase
             .from('lancamentos')
             .update({ data_vencimento: form.data })
             .eq('id', editItem.id)
-
           if (dateError) throw dateError
 
           addToast('Registros futuros atualizados!', 'success')
         } else {
-          // apenas_este (ou registro sem grupo): atualiza só este
           const { error } = await supabase
             .from('lancamentos')
             .update({
@@ -222,38 +271,52 @@ export default function NovoRegistroModal({
               valor: form.valor,
             })
             .eq('id', editItem.id)
-
           if (error) throw error
           addToast('Registro atualizado!', 'success')
         }
       } else {
         // ── Modo criação ──────────────────────────────────────────────────────
         const isRepetindo = form.repeticao !== 'unico'
-        const n = isRepetindo ? form.meses : 1
+        const n = isRepetindo
+          ? (form.infinito ? MESES_INFINITO : form.meses)
+          : 1
         const isParcelado = form.repeticao === 'parcelado'
         const valorUnitario = isParcelado
           ? parseFloat((form.valor / n).toFixed(2))
           : form.valor
 
-        // Gera um UUID de grupo para vincular todos os registros recorrentes/parcelados
-        const grupoId = isRepetindo
-          ? (crypto.randomUUID ? crypto.randomUUID() : self.crypto.randomUUID())
-          : null
+        // Gera UUID de grupo apenas para registros repetidos
+        let grupoId = null
+        if (isRepetindo) {
+          grupoId = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2) + Date.now().toString(36)
+        }
 
-        const registros = Array.from({ length: n }, (_, i) => ({
-          user_id: user.id,
-          data_registro: form.data,
-          data_vencimento: addMonths(form.data, i),
-          descricao: form.descricao.trim(),
-          tipo: form.tipo,
-          categoria: form.categoria,
-          valor: valorUnitario,
-          parcela_atual: n > 1 ? i + 1 : null,
-          total_parcelas: n > 1 ? n : null,
-          valor_total: form.valor,
-          grupo_recorrente: grupoId,
-          tipo_repeticao: isRepetindo ? form.repeticao : null,
-        }))
+        // Monta registros SEM os campos novos caso grupoId seja null
+        // (evita erro caso a migração SQL ainda não tenha sido executada)
+        const registros = Array.from({ length: n }, (_, i) => {
+          const rec = {
+            user_id: user.id,
+            data_registro: form.data,
+            data_vencimento: addMonths(form.data, i),
+            descricao: form.descricao.trim(),
+            tipo: form.tipo,
+            categoria: form.categoria,
+            valor: valorUnitario,
+            valor_total: form.valor,
+          }
+          if (n > 1) {
+            rec.parcela_atual = i + 1
+            rec.total_parcelas = n
+          }
+          // Só inclui colunas novas se existirem (após migração SQL)
+          if (grupoId) {
+            rec.grupo_recorrente = grupoId
+            rec.tipo_repeticao = form.repeticao
+          }
+          return rec
+        })
 
         const { error } = await supabase.from('lancamentos').insert(registros)
         if (error) throw error
@@ -261,12 +324,15 @@ export default function NovoRegistroModal({
         const msg = isParcelado
           ? `${n} parcelas de ${formatCurrency(valorUnitario)} criadas!`
           : n > 1
-            ? `${n} meses recorrentes criados!`
+            ? form.infinito
+              ? `${n} meses recorrentes criados (sem prazo)!`
+              : `${n} meses recorrentes criados!`
             : 'Registro salvo!'
         addToast(msg, 'success')
       }
       setTimeout(() => { onSaved(); handleClose() }, 1000)
-    } catch {
+    } catch (err) {
+      console.error('Erro ao salvar:', err)
       addToast('Erro ao salvar. Tente novamente.', 'error')
     } finally {
       setSaving(false)
@@ -290,14 +356,14 @@ export default function NovoRegistroModal({
     if (form.categoria === nome) set('categoria', '')
   }
 
-  // Resumo da repetição
-  const valorUnitario = form.repeticao === 'parcelado' && form.meses > 1
-    ? form.valor / form.meses : form.valor
+  // Número real de meses usado no resumo
+  const mesesToUse = form.infinito ? MESES_INFINITO : form.meses
+  const valorUnitario = form.repeticao === 'parcelado' && mesesToUse > 1
+    ? form.valor / mesesToUse : form.valor
   const totalGeral = form.repeticao !== 'unico'
-    ? form.repeticao === 'parcelado' ? form.valor : form.valor * form.meses
+    ? form.repeticao === 'parcelado' ? form.valor : form.valor * mesesToUse
     : form.valor
 
-  // Badge de escopo para edição recorrente
   const showEscopoBadge = isEdit && editItem?.grupo_recorrente
 
   return (
@@ -321,18 +387,9 @@ export default function NovoRegistroModal({
             <h2 className="text-base font-bold text-slate-800">
               {isEdit ? 'Editar Registro' : 'Novo Registro'}
             </h2>
-            {/* Indicador de escopo */}
             {showEscopoBadge && (
-              <p className={`text-xs mt-0.5 font-medium
-                ${editEscopo === 'este_e_proximos' ? 'text-primary' : 'text-slate-400'}`}>
-                {editEscopo === 'este_e_proximos'
-                  ? '📅 Editando este e os próximos'
-                  : '📌 Editando apenas este'}
-              </p>
-            )}
-            {isEdit && editItem.total_parcelas > 1 && editItem.tipo_repeticao !== 'recorrente' && !showEscopoBadge && (
-              <p className="text-xs text-slate-400 mt-0.5">
-                {editItem.parcela_atual}/{editItem.total_parcelas} — editando apenas esta
+              <p className={`text-xs mt-0.5 font-medium ${editEscopo === 'este_e_proximos' ? 'text-primary' : 'text-slate-400'}`}>
+                {editEscopo === 'este_e_proximos' ? '📅 Editando este e os próximos' : '📌 Editando apenas este'}
               </p>
             )}
           </div>
@@ -446,7 +503,7 @@ export default function NovoRegistroModal({
             {creating && (
               <NewCategoryForm
                 tipo={form.tipo}
-                createCategory={createCategory}  // ← mesma instância do pai
+                createCategory={createCategory}
                 onCreated={(nome) => { set('categoria', nome); setCreating(false) }}
                 onCancel={() => setCreating(false)}
               />
@@ -488,25 +545,30 @@ export default function NovoRegistroModal({
                 )}
               </div>
 
-              {/* Stepper de meses */}
+              {/* Stepper de meses + toggle infinito */}
               {form.repeticao !== 'unico' && (
                 <>
-                  <div className="flex items-center gap-3">
-                    <button type="button"
-                      onClick={() => set('meses', Math.max(2, form.meses - 1))}
-                      className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">
-                      −
+                  {/* Toggle "Sem prazo" — só para recorrente */}
+                  {form.repeticao === 'recorrente' && (
+                    <button
+                      type="button"
+                      onClick={() => set('infinito', !form.infinito)}
+                      className={`w-full mb-3 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2
+                        ${form.infinito
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                    >
+                      <span className="text-base">∞</span>
+                      {form.infinito ? 'Sem prazo definido (ativo)' : 'Sem prazo definido'}
                     </button>
-                    <div className="flex-1 text-center">
-                      <span className="text-2xl font-bold text-slate-800">{form.meses}</span>
-                      <span className="text-slate-400 text-sm ml-1">meses</span>
-                    </div>
-                    <button type="button"
-                      onClick={() => set('meses', Math.min(60, form.meses + 1))}
-                      className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">
-                      +
-                    </button>
-                  </div>
+                  )}
+
+                  {/* Stepper — desabilitado quando infinito */}
+                  <MesesStepper
+                    value={form.meses}
+                    onChange={v => set('meses', v)}
+                    disabled={form.infinito}
+                  />
 
                   {/* Resumo */}
                   {form.valor > 0 && (
@@ -518,10 +580,15 @@ export default function NovoRegistroModal({
                       {form.repeticao === 'recorrente' ? (
                         <>
                           <p className="text-success text-sm font-medium">
-                            {formatCurrency(form.valor)} / mês por {form.meses} meses
+                            {formatCurrency(form.valor)} / mês
+                            {form.infinito
+                              ? ' · sem prazo definido'
+                              : ` por ${form.meses} meses`}
                           </p>
                           <p className="text-success/60 text-xs mt-0.5">
-                            Total: {formatCurrency(totalGeral)}
+                            {form.infinito
+                              ? `${MESES_INFINITO} registros criados (~10 anos)`
+                              : `Total: ${formatCurrency(totalGeral)}`}
                           </p>
                         </>
                       ) : (

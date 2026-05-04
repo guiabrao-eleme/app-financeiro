@@ -35,6 +35,22 @@ const tabs = [
       </svg>
     ),
   },
+  {
+    id: 'observacoes',
+    label: 'Notas',
+    icon: (active) => (
+      active ? (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+          <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5">
+          <rect x="3" y="3" width="18" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M7 8h10M7 12h10M7 16h5" strokeLinecap="round"/>
+        </svg>
+      )
+    ),
+  },
 ]
 
 export default function BottomNav({ active, onChange }) {
@@ -62,7 +78,7 @@ export default function BottomNav({ active, onChange }) {
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-40"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div ref={containerRef} className="relative flex items-center justify-around px-3 py-1">
+      <div ref={containerRef} className="relative flex items-center justify-around px-1 py-1">
 
         {/* Indicador deslizante */}
         {indicatorBounds.width > 0 && (
@@ -88,11 +104,11 @@ export default function BottomNav({ active, onChange }) {
               key={tab.id}
               ref={el => { tabRefs.current[index] = el }}
               onClick={() => onChange(tab.id)}
-              className={`relative z-10 flex flex-col items-center gap-0.5 py-2.5 px-5 rounded-2xl transition-colors duration-200
+              className={`relative z-10 flex flex-col items-center gap-0.5 py-2.5 px-4 rounded-2xl transition-colors duration-200
                 ${isActive ? 'text-white' : 'text-slate-400'}`}
             >
               {tab.icon(isActive)}
-              <span className={`text-[10px] font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>
+              <span className={`text-[9px] font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>
                 {tab.label}
               </span>
             </button>
