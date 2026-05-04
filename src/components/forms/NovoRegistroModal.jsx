@@ -315,7 +315,19 @@ export default function NovoRegistroModal({
           return rec
         })
 
-        const { error } = await supabase.from('lancamentos').insert(registros)
+        let { error } = await supabase.from('lancamentos').insert(registros)
+
+        // Fallback: se as colunas de recorrência ainda não existem no banco,
+        // tenta novamente sem elas (app continua funcionando sem a migração SQL)
+        if (error && (error.message?.includes('grupo_recorrente') || error.message?.includes('tipo_repeticao'))) {
+          const semColunaNovas = registros.map(({ grupo_recorrente, tipo_repeticao, ...rest }) => rest)
+          const res2 = await supabase.from('lancamentos').insert(semColunaNovas)
+          error = res2.error
+          if (!res2.error) {
+            addToast('Salvo! Para agrupar recorrentes, execute o SQL de migração.', 'success')
+          }
+        }
+
         if (error) throw error
 
         const msg = isParcelado
