@@ -156,16 +156,20 @@ function MonthlyTable({ monthlyData, currentYear }) {
       {/* Cabeçalho */}
       <div className="grid grid-cols-4 px-4 pb-2 border-b border-slate-100">
         <span className="text-xs text-slate-400 font-medium">Mês</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Entradas</span>
+        <div className="text-right">
+          <span className="block text-[9px] text-slate-400 font-medium leading-none">ant.</span>
+          <span className="block text-[9px] text-slate-400 font-medium leading-none">entradas</span>
+        </div>
         <span className="text-xs text-slate-400 font-medium text-right">Saídas</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Saldo</span>
+        <span className="text-xs text-slate-400 font-medium text-right">Acumulado</span>
       </div>
 
       {monthlyData.map((row, i) => {
-        const saldoMes = row.entradas - row.saidas
-        const carry    = i > 0 ? saldosAcumulados[i - 1] : 0
+        const saldoAcum = saldosAcumulados[i]
+        const carry     = i > 0 ? saldosAcumulados[i - 1] : 0
         const isCurrentMonth = i === currentMonth
-        const hasData = row.entradas > 0 || row.saidas > 0
+        const hasData   = row.entradas > 0 || row.saidas > 0
+        const showAcum  = hasData || saldoAcum !== 0
 
         return (
           <div
@@ -179,26 +183,30 @@ function MonthlyTable({ monthlyData, currentYear }) {
               {MONTH_LABELS[i]}
             </span>
 
-            {/* Entradas: valor do mês (grande) + saldo anterior (pequeno) */}
+            {/* Entradas: saldo anterior (pequeno/cinza) + entradas do mês (pequeno/verde) */}
             <div className="text-right">
-              <span className={`block text-xs ${hasData ? 'text-success font-medium' : 'text-slate-300'}`}>
+              {carry !== 0 ? (
+                <span className={`block text-[9px] font-normal leading-tight
+                  ${carry >= 0 ? 'text-slate-400' : 'text-danger/60'}`}>
+                  {carry >= 0 ? '+' : ''}{formatCurrency(carry)}
+                </span>
+              ) : (
+                <span className="block text-[9px] leading-tight text-slate-300">—</span>
+              )}
+              <span className={`block text-[10px] font-medium leading-tight
+                ${hasData ? 'text-success' : 'text-slate-300'}`}>
                 {hasData ? formatCurrency(row.entradas) : '—'}
               </span>
-              {carry !== 0 && (
-                <span className={`block text-[9px] font-normal leading-tight
-                  ${carry >= 0 ? 'text-success/60' : 'text-danger/60'}`}>
-                  {carry >= 0 ? '+' : ''}{formatCurrency(carry)} ant.
-                </span>
-              )}
             </div>
 
             <span className={`text-xs text-right ${hasData ? 'text-danger font-medium' : 'text-slate-300'}`}>
               {hasData ? formatCurrency(row.saidas) : '—'}
             </span>
 
-            <span className={`text-xs text-right font-semibold
-              ${!hasData ? 'text-slate-300' : saldoMes >= 0 ? 'text-primary' : 'text-danger'}`}>
-              {hasData ? formatCurrency(saldoMes) : '—'}
+            {/* Acumulado: número principal em destaque */}
+            <span className={`text-sm text-right font-bold
+              ${!showAcum ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
+              {showAcum ? formatCurrency(saldoAcum) : '—'}
             </span>
           </div>
         )
