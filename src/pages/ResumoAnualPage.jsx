@@ -158,11 +158,16 @@ function MonthlyTable({ monthlyData, currentYear }) {
         <span className="text-xs text-slate-400 font-medium">Mês</span>
         <span className="text-xs text-slate-400 font-medium text-right">Entradas</span>
         <span className="text-xs text-slate-400 font-medium text-right">Saídas</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Acumulado</span>
+        <div className="text-right">
+          <span className="block text-[9px] text-slate-400 font-medium leading-none">do mês</span>
+          <span className="block text-[9px] text-slate-400 font-medium leading-none">acumulado</span>
+        </div>
       </div>
 
       {monthlyData.map((row, i) => {
         const saldoAcum = saldosAcumulados[i]
+        const saldoMes  = row.entradas - row.saidas
+        const carry     = i > 0 ? saldosAcumulados[i - 1] : 0
         const isCurrentMonth = i === currentMonth
         const hasData = row.entradas > 0 || row.saidas > 0
         const showSaldo = hasData || saldoAcum !== 0
@@ -185,10 +190,29 @@ function MonthlyTable({ monthlyData, currentYear }) {
             <span className={`text-xs text-right ${hasData ? 'text-danger font-medium' : 'text-slate-300'}`}>
               {hasData ? formatCurrency(row.saidas) : '—'}
             </span>
-            <span className={`text-xs text-right font-semibold
-              ${!showSaldo ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
-              {showSaldo ? formatCurrency(saldoAcum) : '—'}
-            </span>
+
+            {/* Duas linhas: saldo do mês (cinza) + acumulado com carry-over (colorido) */}
+            <div className="text-right">
+              {hasData ? (
+                <span className={`block text-[10px] font-medium leading-tight
+                  ${saldoMes >= 0 ? 'text-slate-400' : 'text-slate-400'}`}>
+                  {saldoMes >= 0 ? '+' : ''}{formatCurrency(saldoMes)}
+                </span>
+              ) : (
+                <span className="block text-[10px] text-slate-300 leading-tight">—</span>
+              )}
+              <span className={`block text-xs font-bold leading-tight
+                ${!showSaldo ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
+                {showSaldo ? formatCurrency(saldoAcum) : '—'}
+              </span>
+              {/* Indica o carry-over do mês anterior quando relevante */}
+              {hasData && carry !== 0 && (
+                <span className={`block text-[8px] font-normal leading-none mt-0.5
+                  ${carry >= 0 ? 'text-primary/50' : 'text-danger/50'}`}>
+                  {carry >= 0 ? '+' : ''}{formatCurrency(carry)} ant.
+                </span>
+              )}
+            </div>
           </div>
         )
       })}
