@@ -300,7 +300,8 @@ export default function NovoRegistroModal({
           categoria: form.categoria,
           valor: valorUnitario,
           valor_total: form.valor,
-          ...(n > 1 && { parcela_atual: i + 1, total_parcelas: n }),
+          parcela_atual: i + 1,
+          total_parcelas: n,
           ...(grupoId && { grupo_recorrente: grupoId, tipo_repeticao: form.repeticao }),
         }))
 
@@ -314,7 +315,8 @@ export default function NovoRegistroModal({
           categoria: form.categoria,
           valor: valorUnitario,
           valor_total: form.valor,
-          ...(n > 1 && { parcela_atual: i + 1, total_parcelas: n }),
+          parcela_atual: i + 1,
+          total_parcelas: n,
         }))
 
         // Nível 3 — mínimo absoluto (sempre deve funcionar)
