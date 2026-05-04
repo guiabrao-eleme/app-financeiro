@@ -168,8 +168,8 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
           />
         </div>
 
-        {/* Botões — dentro do scroll, sempre acessíveis */}
-        <div className="px-5 py-4 pb-10 bg-white border-t border-slate-100 flex gap-3">
+        {/* Botões — sticky no fundo do sheet, sempre visíveis */}
+        <div className="sticky bottom-0 px-5 py-4 pb-10 bg-white border-t border-slate-100 flex gap-3">
           {isEdit && (
             <button
               type="button"

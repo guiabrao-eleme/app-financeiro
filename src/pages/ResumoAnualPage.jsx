@@ -26,7 +26,12 @@ function LineChart({ monthlyData }) {
 
   const entradas = monthlyData.map(m => m.entradas)
   const saidas   = monthlyData.map(m => m.saidas)
-  const saldo    = monthlyData.map(m => m.entradas - m.saidas)
+  // Saldo acumulado: sobra do mês anterior entra como saldo inicial do próximo
+  const saldo = monthlyData.reduce((acc, m) => {
+    const prev = acc.length > 0 ? acc[acc.length - 1] : 0
+    acc.push(prev + m.entradas - m.saidas)
+    return acc
+  }, [])
 
   const allVals = [...entradas, ...saidas, ...saldo]
   const maxVal  = Math.max(...allVals, 1)
@@ -137,6 +142,13 @@ function MonthlyTable({ monthlyData, currentYear }) {
   const totSaidas   = monthlyData.reduce((s, m) => s + m.saidas, 0)
   const totSaldo    = totEntradas - totSaidas
 
+  // Saldo acumulado: sobra do mês anterior entra como saldo inicial do próximo
+  const saldosAcumulados = monthlyData.reduce((acc, m) => {
+    const prev = acc.length > 0 ? acc[acc.length - 1] : 0
+    acc.push(prev + m.entradas - m.saidas)
+    return acc
+  }, [])
+
   return (
     <div className="mx-4 bg-white rounded-2xl border border-slate-100 overflow-hidden">
       <h3 className="text-sm font-semibold text-slate-700 px-4 pt-4 pb-3">Mês a mês</h3>
@@ -150,9 +162,10 @@ function MonthlyTable({ monthlyData, currentYear }) {
       </div>
 
       {monthlyData.map((row, i) => {
-        const saldo = row.entradas - row.saidas
+        const saldoAcum = saldosAcumulados[i]
         const isCurrentMonth = i === currentMonth
         const hasData = row.entradas > 0 || row.saidas > 0
+        const showSaldo = hasData || saldoAcum !== 0
 
         return (
           <div
@@ -173,8 +186,8 @@ function MonthlyTable({ monthlyData, currentYear }) {
               {hasData ? formatCurrency(row.saidas) : '—'}
             </span>
             <span className={`text-xs text-right font-semibold
-              ${!hasData ? 'text-slate-300' : saldo >= 0 ? 'text-primary' : 'text-danger'}`}>
-              {hasData ? formatCurrency(saldo) : '—'}
+              ${!showSaldo ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
+              {showSaldo ? formatCurrency(saldoAcum) : '—'}
             </span>
           </div>
         )
@@ -263,12 +276,17 @@ export default function ResumoAnualPage() {
   const [categoryData, setCategoryData] = useState({})
 
   const handleExportCSV = () => {
-    const headers = ['Mês', 'Entradas (R$)', 'Saídas (R$)', 'Saldo (R$)']
+    const saldosAcum = monthlyData.reduce((acc, m) => {
+      const prev = acc.length > 0 ? acc[acc.length - 1] : 0
+      acc.push(prev + m.entradas - m.saidas)
+      return acc
+    }, [])
+    const headers = ['Mês', 'Entradas (R$)', 'Saídas (R$)', 'Saldo acumulado (R$)']
     const rows = monthlyData.map((m, i) => [
       MONTH_FULL[i],
       formatCSVCurrency(m.entradas),
       formatCSVCurrency(m.saidas),
-      formatCSVCurrency(m.entradas - m.saidas),
+      formatCSVCurrency(saldosAcum[i]),
     ])
     const totE = monthlyData.reduce((s, m) => s + m.entradas, 0)
     const totS = monthlyData.reduce((s, m) => s + m.saidas, 0)
