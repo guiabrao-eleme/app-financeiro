@@ -5,6 +5,7 @@ import { formatCurrency, formatDate, getMonthRange, formatMonthYear } from '../u
 import { useToast } from '../components/ui/Toast'
 import { Skeleton } from '../components/ui/Skeleton'
 import NovoRegistroModal from '../components/forms/NovoRegistroModal'
+import RecorrenciaEscopoSheet from '../components/ui/RecorrenciaEscopoSheet'
 import MonthYearPicker from '../components/ui/MonthYearPicker'
 import { downloadCSV, formatCSVCurrency } from '../utils/csv'
 import { useCategories, getCatMeta } from '../hooks/useCategories'
@@ -44,7 +45,8 @@ function ListSkeleton() {
 function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onToggleSelect, categories }) {
   const meta = getCatMeta(item.categoria, categories)
   const isEntrada = item.tipo === 'Entrada'
-  const hasParcelas = item.total_parcelas > 1
+  const isRecorrente = item.tipo_repeticao === 'recorrente' && item.grupo_recorrente
+  const isParcelado  = item.tipo_repeticao === 'parcelado'  && item.total_parcelas > 1
 
   return (
     <div
@@ -71,11 +73,23 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
         </div>
       )}
 
-
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <p className="text-sm font-medium text-slate-800 truncate">{item.descricao}</p>
-          {hasParcelas && (
+          {/* Badge recorrente */}
+          {isRecorrente && (
+            <span className="flex-shrink-0 text-[10px] bg-blue-50 text-blue-500 font-semibold px-1.5 py-0.5 rounded-full">
+              🔄 recorrente
+            </span>
+          )}
+          {/* Badge parcelado */}
+          {isParcelado && (
+            <span className="flex-shrink-0 text-[10px] bg-slate-100 text-slate-500 font-semibold px-1.5 py-0.5 rounded-full">
+              {item.parcela_atual}/{item.total_parcelas}
+            </span>
+          )}
+          {/* Legado: parcelado sem tipo_repeticao */}
+          {!isRecorrente && !isParcelado && item.total_parcelas > 1 && (
             <span className="flex-shrink-0 text-[10px] bg-slate-100 text-slate-500 font-semibold px-1.5 py-0.5 rounded-full">
               {item.parcela_atual}/{item.total_parcelas}
             </span>
@@ -140,11 +154,18 @@ export default function RegistrosPage({ showModal }) {
   const [chip, setChip] = useState('todos')
   const [sortBy, setSortBy] = useState('data_desc')
   const [page, setPage] = useState(1)
-  const [editItem, setEditItem] = useState(null)
 
-  // Multi-select
+  // Edição
+  const [editItem, setEditItem] = useState(null)
+  const [editEscopo, setEditEscopo] = useState('apenas_este')
+
+  // Seleção múltipla
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
+
+  // Seletor de escopo para edição ou exclusão recorrente
+  // { item, action: 'editar' | 'excluir' }
+  const [scopeTarget, setScopeTarget] = useState(null)
 
   // Refs para undo de delete
   const pendingDeletes = useRef({}) // id → { item, timer }
@@ -243,13 +264,11 @@ export default function RegistrosPage({ showModal }) {
 
   useEffect(() => { setPage(1) }, [search, chip, sortBy, year, month, allMonths])
 
-  // ─── Delete com undo ─────────────────────────────────────────────────────────
+  // ─── Soft delete de um item (com undo) ──────────────────────────────────────
   const softDelete = useCallback((item) => {
-    // Remove da UI imediatamente
     setAllItems(prev => prev.filter(i => i.id !== item.id))
     setSelectedIds(prev => { const s = new Set(prev); s.delete(item.id); return s })
 
-    // Cancela timer anterior se existir
     if (pendingDeletes.current[item.id]) {
       clearTimeout(pendingDeletes.current[item.id].timer)
     }
@@ -265,7 +284,6 @@ export default function RegistrosPage({ showModal }) {
       `"${item.descricao}" excluído`,
       'delete',
       () => {
-        // Undo: cancela timer e restaura item
         if (pendingDeletes.current[item.id]) {
           clearTimeout(pendingDeletes.current[item.id].timer)
           delete pendingDeletes.current[item.id]
@@ -279,21 +297,58 @@ export default function RegistrosPage({ showModal }) {
     )
   }, [addToast])
 
-  // Delete múltiplos
+  // ─── Soft delete de um grupo de itens (com undo) ────────────────────────────
+  const softDeleteGroup = useCallback((items) => {
+    const ids = items.map(i => i.id)
+
+    setAllItems(prev => prev.filter(i => !ids.includes(i.id)))
+    setSelectedIds(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s })
+
+    ids.forEach(id => {
+      if (pendingDeletes.current[id]) clearTimeout(pendingDeletes.current[id].timer)
+    })
+
+    const timer = setTimeout(async () => {
+      ids.forEach(id => delete pendingDeletes.current[id])
+      await supabase.from('lancamentos').delete().in('id', ids)
+    }, 5000)
+
+    ids.forEach(id => {
+      pendingDeletes.current[id] = { item: items.find(i => i.id === id), timer }
+    })
+
+    const n = ids.length
+    addToast(
+      `${n} ${n === 1 ? 'registro excluído' : 'registros excluídos'}`,
+      'delete',
+      () => {
+        ids.forEach(id => {
+          if (pendingDeletes.current[id]) {
+            clearTimeout(pendingDeletes.current[id].timer)
+            delete pendingDeletes.current[id]
+          }
+        })
+        clearTimeout(timer)
+        setAllItems(prev => {
+          const existing = new Set(prev.map(i => i.id))
+          const toAdd = items.filter(i => !existing.has(i.id))
+          return [...prev, ...toAdd].sort((a, b) => b.data_vencimento.localeCompare(a.data_vencimento))
+        })
+      }
+    )
+  }, [addToast])
+
+  // ─── Delete múltiplos selecionados ──────────────────────────────────────────
   const deleteSelected = useCallback(() => {
     const toRemove = [...selectedIds]
     const items = allItems.filter(i => toRemove.includes(i.id))
 
-    // Remove da UI
     setAllItems(prev => prev.filter(i => !toRemove.includes(i.id)))
     setSelectedIds(new Set())
     setSelectionMode(false)
 
-    // Cancela timers existentes
     toRemove.forEach(id => {
-      if (pendingDeletes.current[id]) {
-        clearTimeout(pendingDeletes.current[id].timer)
-      }
+      if (pendingDeletes.current[id]) clearTimeout(pendingDeletes.current[id].timer)
     })
 
     const timer = setTimeout(async () => {
@@ -301,17 +356,13 @@ export default function RegistrosPage({ showModal }) {
       await supabase.from('lancamentos').delete().in('id', toRemove)
     }, 5000)
 
-    // Guarda timer para cada id
-    toRemove.forEach(id => {
-      pendingDeletes.current[id] = { timer }
-    })
+    toRemove.forEach(id => { pendingDeletes.current[id] = { timer } })
 
     const n = toRemove.length
     addToast(
       `${n} ${n === 1 ? 'registro excluído' : 'registros excluídos'}`,
       'delete',
       () => {
-        // Undo: cancela timers e restaura itens
         toRemove.forEach(id => {
           if (pendingDeletes.current[id]) {
             clearTimeout(pendingDeletes.current[id].timer)
@@ -327,6 +378,58 @@ export default function RegistrosPage({ showModal }) {
       }
     )
   }, [selectedIds, allItems, addToast])
+
+  // ─── Clique no botão editar ─────────────────────────────────────────────────
+  const handleEditClick = useCallback((item) => {
+    if (item.grupo_recorrente) {
+      // Pergunta o escopo antes de abrir o formulário
+      setScopeTarget({ item, action: 'editar' })
+    } else {
+      setEditEscopo('apenas_este')
+      setEditItem(item)
+    }
+  }, [])
+
+  // ─── Clique no botão excluir ────────────────────────────────────────────────
+  const handleDeleteClick = useCallback((item) => {
+    if (item.grupo_recorrente) {
+      // Pergunta o escopo antes de excluir
+      setScopeTarget({ item, action: 'excluir' })
+    } else {
+      softDelete(item)
+    }
+  }, [softDelete])
+
+  // ─── Após escolher o escopo ─────────────────────────────────────────────────
+  const handleScopeSelect = useCallback(async (scope) => {
+    const { item, action } = scopeTarget
+    setScopeTarget(null)
+
+    if (action === 'editar') {
+      setEditEscopo(scope)
+      setEditItem(item)
+    } else {
+      // excluir
+      if (scope === 'apenas_este') {
+        softDelete(item)
+      } else {
+        // este_e_proximos: busca todos os registros futuros do grupo no banco
+        const { data: futureRecords, error } = await supabase
+          .from('lancamentos')
+          .select('*')
+          .eq('grupo_recorrente', item.grupo_recorrente)
+          .gte('data_vencimento', item.data_vencimento)
+
+        if (error || !futureRecords?.length) {
+          // Fallback: exclui só este
+          softDelete(item)
+          return
+        }
+
+        softDeleteGroup(futureRecords)
+      }
+    }
+  }, [scopeTarget, softDelete, softDeleteGroup])
 
   // Selecionar / desselecionar todos os visíveis
   const allVisibleSelected = visible.length > 0 && visible.every(i => selectedIds.has(i.id))
@@ -351,7 +454,7 @@ export default function RegistrosPage({ showModal }) {
   const handleExportCSV = () => {
     if (sorted.length === 0) { addToast('Nenhum registro para exportar.', 'info'); return }
     const label = allMonths ? `todos` : `${String(month).padStart(2,'0')}-${year}`
-    const headers = ['Data Vencimento','Descrição','Tipo','Categoria','Valor (R$)','Parcela','Total Parcelas']
+    const headers = ['Data Vencimento','Descrição','Tipo','Categoria','Valor (R$)','Parcela','Total Parcelas','Recorrente']
     const rows = sorted.map(i => [
       formatDate(i.data_vencimento),
       i.descricao,
@@ -360,6 +463,7 @@ export default function RegistrosPage({ showModal }) {
       formatCSVCurrency(i.valor),
       i.parcela_atual,
       i.total_parcelas,
+      i.tipo_repeticao ?? '',
     ])
     downloadCSV(`registros-${label}.csv`, headers, rows)
     addToast('CSV exportado com sucesso!', 'success')
@@ -553,8 +657,8 @@ export default function RegistrosPage({ showModal }) {
               <LancamentoItem
                 key={item.id}
                 item={item}
-                onEdit={setEditItem}
-                onDelete={softDelete}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
                 selectionMode={selectionMode}
                 selected={selectedIds.has(item.id)}
                 onToggleSelect={toggleSelect}
@@ -589,6 +693,16 @@ export default function RegistrosPage({ showModal }) {
         onClose={() => setEditItem(null)}
         onSaved={() => { fetchAll(); setEditItem(null) }}
         editItem={editItem}
+        editEscopo={editEscopo}
+      />
+
+      {/* Sheet de escopo para recorrentes */}
+      <RecorrenciaEscopoSheet
+        open={!!scopeTarget}
+        onClose={() => setScopeTarget(null)}
+        action={scopeTarget?.action}
+        descricao={scopeTarget?.item?.descricao}
+        onSelect={handleScopeSelect}
       />
     </div>
   )

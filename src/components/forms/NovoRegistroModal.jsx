@@ -96,7 +96,18 @@ function NewCategoryForm({ tipo, onCreated, onCancel, createCategory }) {
 }
 
 // ─── Modal principal ──────────────────────────────────────────────────────────
-export default function NovoRegistroModal({ open, onClose, onSaved, editItem = null }) {
+/**
+ * editEscopo: 'apenas_este' | 'este_e_proximos'
+ *   — vem do RegistrosPage após o usuário escolher o escopo no RecorrenciaEscopoSheet
+ *   — só é relevante quando editItem.grupo_recorrente está definido
+ */
+export default function NovoRegistroModal({
+  open,
+  onClose,
+  onSaved,
+  editItem = null,
+  editEscopo = 'apenas_este',
+}) {
   const { user } = useAuth()
   const { addToast, ToastContainer } = useToast()
   // Uma única instância do hook — compartilhada com NewCategoryForm via prop
@@ -174,25 +185,60 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
     setSaving(true)
     try {
       if (isEdit) {
-        const { error } = await supabase
-          .from('lancamentos')
-          .update({
-            data_vencimento: form.data,
-            descricao: form.descricao.trim(),
-            tipo: form.tipo,
-            categoria: form.categoria,
-            valor: form.valor,
-          })
-          .eq('id', editItem.id)
-        if (error) throw error
-        addToast('Registro atualizado!', 'success')
+        // ── Modo edição ───────────────────────────────────────────────────────
+        if (editEscopo === 'este_e_proximos' && editItem.grupo_recorrente) {
+          // 1. Atualiza campos comuns em todos os registros futuros do grupo
+          const { error: bulkError } = await supabase
+            .from('lancamentos')
+            .update({
+              descricao: form.descricao.trim(),
+              tipo: form.tipo,
+              categoria: form.categoria,
+              valor: form.valor,
+            })
+            .eq('grupo_recorrente', editItem.grupo_recorrente)
+            .gte('data_vencimento', editItem.data_vencimento)
+
+          if (bulkError) throw bulkError
+
+          // 2. Atualiza a data apenas neste registro específico
+          const { error: dateError } = await supabase
+            .from('lancamentos')
+            .update({ data_vencimento: form.data })
+            .eq('id', editItem.id)
+
+          if (dateError) throw dateError
+
+          addToast('Registros futuros atualizados!', 'success')
+        } else {
+          // apenas_este (ou registro sem grupo): atualiza só este
+          const { error } = await supabase
+            .from('lancamentos')
+            .update({
+              data_vencimento: form.data,
+              descricao: form.descricao.trim(),
+              tipo: form.tipo,
+              categoria: form.categoria,
+              valor: form.valor,
+            })
+            .eq('id', editItem.id)
+
+          if (error) throw error
+          addToast('Registro atualizado!', 'success')
+        }
       } else {
+        // ── Modo criação ──────────────────────────────────────────────────────
         const isRepetindo = form.repeticao !== 'unico'
         const n = isRepetindo ? form.meses : 1
         const isParcelado = form.repeticao === 'parcelado'
         const valorUnitario = isParcelado
           ? parseFloat((form.valor / n).toFixed(2))
           : form.valor
+
+        // Gera um UUID de grupo para vincular todos os registros recorrentes/parcelados
+        const grupoId = isRepetindo
+          ? (crypto.randomUUID ? crypto.randomUUID() : self.crypto.randomUUID())
+          : null
 
         const registros = Array.from({ length: n }, (_, i) => ({
           user_id: user.id,
@@ -205,6 +251,8 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
           parcela_atual: n > 1 ? i + 1 : null,
           total_parcelas: n > 1 ? n : null,
           valor_total: form.valor,
+          grupo_recorrente: grupoId,
+          tipo_repeticao: isRepetindo ? form.repeticao : null,
         }))
 
         const { error } = await supabase.from('lancamentos').insert(registros)
@@ -249,6 +297,9 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
     ? form.repeticao === 'parcelado' ? form.valor : form.valor * form.meses
     : form.valor
 
+  // Badge de escopo para edição recorrente
+  const showEscopoBadge = isEdit && editItem?.grupo_recorrente
+
   return (
     <>
       <ToastContainer />
@@ -270,7 +321,16 @@ export default function NovoRegistroModal({ open, onClose, onSaved, editItem = n
             <h2 className="text-base font-bold text-slate-800">
               {isEdit ? 'Editar Registro' : 'Novo Registro'}
             </h2>
-            {isEdit && editItem.total_parcelas > 1 && (
+            {/* Indicador de escopo */}
+            {showEscopoBadge && (
+              <p className={`text-xs mt-0.5 font-medium
+                ${editEscopo === 'este_e_proximos' ? 'text-primary' : 'text-slate-400'}`}>
+                {editEscopo === 'este_e_proximos'
+                  ? '📅 Editando este e os próximos'
+                  : '📌 Editando apenas este'}
+              </p>
+            )}
+            {isEdit && editItem.total_parcelas > 1 && editItem.tipo_repeticao !== 'recorrente' && !showEscopoBadge && (
               <p className="text-xs text-slate-400 mt-0.5">
                 {editItem.parcela_atual}/{editItem.total_parcelas} — editando apenas esta
               </p>
