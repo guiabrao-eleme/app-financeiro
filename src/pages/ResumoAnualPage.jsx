@@ -154,21 +154,19 @@ function MonthlyTable({ monthlyData, currentYear }) {
       <h3 className="text-sm font-semibold text-slate-700 px-4 pt-4 pb-3">Mês a mês</h3>
 
       {/* Cabeçalho */}
-      <div className="grid grid-cols-4 px-4 pb-2 border-b border-slate-100">
+      <div className="grid grid-cols-3 px-4 pb-2 border-b border-slate-100">
         <span className="text-xs text-slate-400 font-medium">Mês</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Entradas</span>
         <span className="text-xs text-slate-400 font-medium text-right">Saídas</span>
         <span className="text-xs text-slate-400 font-medium text-right">Acumulado</span>
       </div>
 
       {monthlyData.map((row, i) => {
-        const saldoAcum    = saldosAcumulados[i]
-        const carry        = i > 0 ? saldosAcumulados[i - 1] : 0
+        const saldoAcum      = saldosAcumulados[i]
+        const carry          = i > 0 ? saldosAcumulados[i - 1] : 0
         const isCurrentMonth = i === currentMonth
-        const hasData      = row.entradas > 0 || row.saidas > 0
-        const showAcum     = hasData || saldoAcum !== 0
-        const isExpanded   = expandedMonth === i
-        const hasCarry     = carry !== 0
+        const hasData        = row.entradas > 0 || row.saidas > 0
+        const showAcum       = hasData || saldoAcum !== 0
+        const isExpanded     = expandedMonth === i
 
         return (
           <div key={i} className={`border-b border-slate-50 last:border-b-0 ${isCurrentMonth ? 'bg-primary/5' : ''}`}>
@@ -177,18 +175,12 @@ function MonthlyTable({ monthlyData, currentYear }) {
             <button
               type="button"
               onClick={() => setExpandedMonth(isExpanded ? null : i)}
-              className="w-full grid grid-cols-4 px-4 py-3 text-left active:bg-slate-50 transition-colors"
+              className="w-full grid grid-cols-3 px-4 py-3 text-left active:bg-slate-50 transition-colors"
             >
               <span className={`text-xs font-medium flex items-center gap-1
                 ${isCurrentMonth ? 'text-primary' : 'text-slate-600'}`}>
                 {isCurrentMonth && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
                 {MONTH_LABELS[i]}
-                {hasCarry && <span className="text-slate-300 text-[9px]">›</span>}
-              </span>
-
-              <span className={`text-xs text-right font-medium
-                ${hasData ? 'text-success' : 'text-slate-300'}`}>
-                {hasData ? formatCurrency(row.entradas) : '—'}
               </span>
 
               <span className={`text-xs text-right font-medium
@@ -203,9 +195,9 @@ function MonthlyTable({ monthlyData, currentYear }) {
             </button>
 
             {/* Painel de detalhes — aparece ao clicar */}
-            {isExpanded && (hasData || hasCarry) && (
+            {isExpanded && (hasData || carry !== 0) && (
               <div className="mx-4 mb-3 rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 space-y-1.5">
-                {hasCarry && (
+                {carry !== 0 && (
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500">Saldo anterior</span>
                     <span className={`font-medium ${carry >= 0 ? 'text-primary' : 'text-danger'}`}>
@@ -238,9 +230,8 @@ function MonthlyTable({ monthlyData, currentYear }) {
       })}
 
       {/* Total anual */}
-      <div className="grid grid-cols-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
+      <div className="grid grid-cols-3 px-4 py-3 bg-slate-50 border-t border-slate-200">
         <span className="text-xs font-bold text-slate-700">Ano</span>
-        <span className="text-xs font-bold text-success text-right">{formatCurrency(totEntradas)}</span>
         <span className="text-xs font-bold text-danger text-right">{formatCurrency(totSaidas)}</span>
         <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-primary' : 'text-danger'}`}>
           {formatCurrency(totSaldo)}
