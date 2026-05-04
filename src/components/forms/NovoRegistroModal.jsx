@@ -293,6 +293,7 @@ export default function NovoRegistroModal({
         // Nível 1 — campos completos (requer migração SQL executada)
         const recsCompletos = Array.from({ length: n }, (_, i) => ({
           user_id: user.id,
+          data_registro: form.data,
           data_vencimento: addMonths(form.data, i),
           descricao: form.descricao.trim(),
           tipo: form.tipo,
@@ -305,6 +306,7 @@ export default function NovoRegistroModal({
         // Nível 2 — sem colunas de grupo (sem grupo_recorrente/tipo_repeticao)
         const recsSemGrupo = Array.from({ length: n }, (_, i) => ({
           user_id: user.id,
+          data_registro: form.data,
           data_vencimento: addMonths(form.data, i),
           descricao: form.descricao.trim(),
           tipo: form.tipo,
@@ -316,6 +318,7 @@ export default function NovoRegistroModal({
         // Nível 3 — mínimo absoluto (sempre deve funcionar)
         const recsMinimo = Array.from({ length: n }, (_, i) => ({
           user_id: user.id,
+          data_registro: form.data,
           data_vencimento: addMonths(form.data, i),
           descricao: form.descricao.trim(),
           tipo: form.tipo,
