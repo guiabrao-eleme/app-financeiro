@@ -154,10 +154,11 @@ function MonthlyTable({ monthlyData, currentYear }) {
       <h3 className="text-sm font-semibold text-slate-700 px-4 pt-4 pb-3">Mês a mês</h3>
 
       {/* Cabeçalho */}
-      <div className="grid grid-cols-3 px-4 pb-2 border-b border-slate-100">
+      <div className="grid grid-cols-4 px-4 pb-2 border-b border-slate-100">
         <span className="text-xs text-slate-400 font-medium">Mês</span>
+        <span className="text-xs text-slate-400 font-medium text-right">Saldo</span>
         <span className="text-xs text-slate-400 font-medium text-right">Saídas</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Acumulado</span>
+        <span className="text-xs text-slate-400 font-medium text-right">Resultado</span>
       </div>
 
       {monthlyData.map((row, i) => {
@@ -175,7 +176,7 @@ function MonthlyTable({ monthlyData, currentYear }) {
             <button
               type="button"
               onClick={() => setExpandedMonth(isExpanded ? null : i)}
-              className="w-full grid grid-cols-3 px-4 py-3 text-left active:bg-slate-50 transition-colors"
+              className="w-full grid grid-cols-4 px-4 py-3 text-left active:bg-slate-50 transition-colors"
             >
               <span className={`text-xs font-medium flex items-center gap-1
                 ${isCurrentMonth ? 'text-primary' : 'text-slate-600'}`}>
@@ -183,14 +184,19 @@ function MonthlyTable({ monthlyData, currentYear }) {
                 {MONTH_LABELS[i]}
               </span>
 
+              <span className={`text-xs text-right font-bold
+                ${!showAcum ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
+                {showAcum ? formatCurrency(saldoAcum) : '—'}
+              </span>
+
               <span className={`text-xs text-right font-medium
                 ${hasData ? 'text-danger' : 'text-slate-300'}`}>
                 {hasData ? formatCurrency(row.saidas) : '—'}
               </span>
 
-              <span className={`text-xs text-right font-bold
-                ${!showAcum ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
-                {showAcum ? formatCurrency(saldoAcum) : '—'}
+              <span className={`text-xs text-right font-medium
+                ${!hasData ? 'text-slate-300' : (row.entradas - row.saidas) >= 0 ? 'text-success' : 'text-danger'}`}>
+                {hasData ? formatCurrency(row.entradas - row.saidas) : '—'}
               </span>
             </button>
 
@@ -230,11 +236,14 @@ function MonthlyTable({ monthlyData, currentYear }) {
       })}
 
       {/* Total anual */}
-      <div className="grid grid-cols-3 px-4 py-3 bg-slate-50 border-t border-slate-200">
+      <div className="grid grid-cols-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
         <span className="text-xs font-bold text-slate-700">Ano</span>
-        <span className="text-xs font-bold text-danger text-right">{formatCurrency(totSaidas)}</span>
         <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-primary' : 'text-danger'}`}>
           {formatCurrency(totSaldo)}
+        </span>
+        <span className="text-xs font-bold text-danger text-right">{formatCurrency(totSaidas)}</span>
+        <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-success' : 'text-danger'}`}>
+          {formatCurrency(totEntradas - totSaidas)}
         </span>
       </div>
     </div>
