@@ -299,6 +299,7 @@ export default function NovoRegistroModal({
           tipo: form.tipo,
           categoria: form.categoria,
           valor: valorUnitario,
+          valor_total: form.valor,
           ...(n > 1 && { parcela_atual: i + 1, total_parcelas: n }),
           ...(grupoId && { grupo_recorrente: grupoId, tipo_repeticao: form.repeticao }),
         }))
@@ -312,6 +313,7 @@ export default function NovoRegistroModal({
           tipo: form.tipo,
           categoria: form.categoria,
           valor: valorUnitario,
+          valor_total: form.valor,
           ...(n > 1 && { parcela_atual: i + 1, total_parcelas: n }),
         }))
 
@@ -324,6 +326,7 @@ export default function NovoRegistroModal({
           tipo: form.tipo,
           categoria: form.categoria,
           valor: valorUnitario,
+          valor_total: form.valor,
         }))
 
         // Tenta cada nível, parando no primeiro que funcionar
