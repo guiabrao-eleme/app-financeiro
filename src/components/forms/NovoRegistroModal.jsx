@@ -329,6 +329,8 @@ export default function NovoRegistroModal({
           categoria: form.categoria,
           valor: valorUnitario,
           valor_total: form.valor,
+          parcela_atual: i + 1,
+          total_parcelas: n,
         }))
 
         // Tenta cada nível, parando no primeiro que funcionar
