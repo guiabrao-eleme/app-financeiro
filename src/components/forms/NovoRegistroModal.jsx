@@ -285,64 +285,69 @@ export default function NovoRegistroModal({
           ? parseFloat((form.valor / n).toFixed(2))
           : form.valor
 
-        // Gera UUID de grupo apenas para registros repetidos
         let grupoId = null
-        if (isRepetindo) {
-          grupoId = typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : Math.random().toString(36).slice(2) + Date.now().toString(36)
+        if (isRepetindo && typeof crypto !== 'undefined' && crypto.randomUUID) {
+          grupoId = crypto.randomUUID()
         }
 
-        // Monta registros — só inclui colunas opcionais quando têm valor
-        // (evita erros caso migrações SQL ainda não tenham sido executadas)
-        const registros = Array.from({ length: n }, (_, i) => {
-          const rec = {
-            user_id: user.id,
-            data_vencimento: addMonths(form.data, i),
-            descricao: form.descricao.trim(),
-            tipo: form.tipo,
-            categoria: form.categoria,
-            valor: valorUnitario,
-          }
-          if (n > 1) {
-            rec.parcela_atual = i + 1
-            rec.total_parcelas = n
-          }
-          if (grupoId) {
-            rec.grupo_recorrente = grupoId
-            rec.tipo_repeticao = form.repeticao
-          }
-          return rec
-        })
+        // Nível 1 — campos completos (requer migração SQL executada)
+        const recsCompletos = Array.from({ length: n }, (_, i) => ({
+          user_id: user.id,
+          data_vencimento: addMonths(form.data, i),
+          descricao: form.descricao.trim(),
+          tipo: form.tipo,
+          categoria: form.categoria,
+          valor: valorUnitario,
+          ...(n > 1 && { parcela_atual: i + 1, total_parcelas: n }),
+          ...(grupoId && { grupo_recorrente: grupoId, tipo_repeticao: form.repeticao }),
+        }))
 
-        let { error } = await supabase.from('lancamentos').insert(registros)
+        // Nível 2 — sem colunas de grupo (sem grupo_recorrente/tipo_repeticao)
+        const recsSemGrupo = Array.from({ length: n }, (_, i) => ({
+          user_id: user.id,
+          data_vencimento: addMonths(form.data, i),
+          descricao: form.descricao.trim(),
+          tipo: form.tipo,
+          categoria: form.categoria,
+          valor: valorUnitario,
+          ...(n > 1 && { parcela_atual: i + 1, total_parcelas: n }),
+        }))
 
-        // Fallback: se as colunas de recorrência ainda não existem no banco,
-        // tenta novamente sem elas (app continua funcionando sem a migração SQL)
-        if (error && (error.message?.includes('grupo_recorrente') || error.message?.includes('tipo_repeticao'))) {
-          const semColunaNovas = registros.map(({ grupo_recorrente, tipo_repeticao, ...rest }) => rest)
-          const res2 = await supabase.from('lancamentos').insert(semColunaNovas)
-          error = res2.error
-          if (!res2.error) {
-            addToast('Salvo! Para agrupar recorrentes, execute o SQL de migração.', 'success')
-          }
+        // Nível 3 — mínimo absoluto (sempre deve funcionar)
+        const recsMinimo = Array.from({ length: n }, (_, i) => ({
+          user_id: user.id,
+          data_vencimento: addMonths(form.data, i),
+          descricao: form.descricao.trim(),
+          tipo: form.tipo,
+          categoria: form.categoria,
+          valor: valorUnitario,
+        }))
+
+        // Tenta cada nível, parando no primeiro que funcionar
+        let lastError = null
+        for (const tentativa of [recsCompletos, recsSemGrupo, recsMinimo]) {
+          const { error } = await supabase.from('lancamentos').insert(tentativa)
+          if (!error) { lastError = null; break }
+          lastError = error
+          // Só tenta fallback se o erro for de coluna inexistente
+          if (!error.message?.includes('does not exist') && !error.message?.includes('column')) break
         }
 
-        if (error) throw error
+        if (lastError) throw lastError
 
         const msg = isParcelado
           ? `${n} parcelas de ${formatCurrency(valorUnitario)} criadas!`
           : n > 1
-            ? form.infinito
-              ? `${n} meses recorrentes criados (sem prazo)!`
-              : `${n} meses recorrentes criados!`
+            ? form.infinito ? `${n} meses recorrentes criados!` : `${n} meses recorrentes criados!`
             : 'Registro salvo!'
         addToast(msg, 'success')
       }
       setTimeout(() => { onSaved(); handleClose() }, 1000)
     } catch (err) {
       console.error('Erro ao salvar:', err)
-      addToast('Erro ao salvar. Tente novamente.', 'error')
+      // Mostra a mensagem real do Supabase para facilitar o diagnóstico
+      const msg = err?.message || err?.details || 'Erro desconhecido'
+      addToast(`Erro: ${msg}`, 'error')
     } finally {
       setSaving(false)
     }
