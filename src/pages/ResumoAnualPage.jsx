@@ -137,12 +137,12 @@ function LineChart({ monthlyData }) {
 function MonthlyTable({ monthlyData, currentYear }) {
   const now = new Date()
   const currentMonth = currentYear === now.getFullYear() ? now.getMonth() : -1
+  const [expandedMonth, setExpandedMonth] = useState(null)
 
   const totEntradas = monthlyData.reduce((s, m) => s + m.entradas, 0)
   const totSaidas   = monthlyData.reduce((s, m) => s + m.saidas, 0)
   const totSaldo    = totEntradas - totSaidas
 
-  // Saldo acumulado: sobra do mês anterior entra como saldo inicial do próximo
   const saldosAcumulados = monthlyData.reduce((acc, m) => {
     const prev = acc.length > 0 ? acc[acc.length - 1] : 0
     acc.push(prev + m.entradas - m.saidas)
@@ -156,66 +156,83 @@ function MonthlyTable({ monthlyData, currentYear }) {
       {/* Cabeçalho */}
       <div className="grid grid-cols-4 px-4 pb-2 border-b border-slate-100">
         <span className="text-xs text-slate-400 font-medium">Mês</span>
-        <div className="text-right">
-          <span className="block text-[9px] text-slate-400 font-medium leading-none">ant.</span>
-          <span className="block text-[9px] text-slate-400 font-medium leading-none">entradas</span>
-        </div>
+        <span className="text-xs text-slate-400 font-medium text-right">Entradas</span>
         <span className="text-xs text-slate-400 font-medium text-right">Saídas</span>
         <span className="text-xs text-slate-400 font-medium text-right">Acumulado</span>
       </div>
 
       {monthlyData.map((row, i) => {
-        const saldoAcum = saldosAcumulados[i]
-        const carry     = i > 0 ? saldosAcumulados[i - 1] : 0
+        const saldoAcum    = saldosAcumulados[i]
+        const carry        = i > 0 ? saldosAcumulados[i - 1] : 0
         const isCurrentMonth = i === currentMonth
-        const hasData   = row.entradas > 0 || row.saidas > 0
-        const showAcum  = hasData || saldoAcum !== 0
+        const hasData      = row.entradas > 0 || row.saidas > 0
+        const showAcum     = hasData || saldoAcum !== 0
+        const isExpanded   = expandedMonth === i
+        const hasCarry     = carry !== 0
 
         return (
-          <div
-            key={i}
-            className={`grid grid-cols-4 px-4 py-2.5 border-b border-slate-50 last:border-b-0
-              ${isCurrentMonth ? 'bg-primary/5' : ''}`}
-          >
-            <span className={`text-xs font-medium flex items-center gap-1
-              ${isCurrentMonth ? 'text-primary' : 'text-slate-600'}`}>
-              {isCurrentMonth && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
-              {MONTH_LABELS[i]}
-            </span>
+          <div key={i} className={`border-b border-slate-50 last:border-b-0 ${isCurrentMonth ? 'bg-primary/5' : ''}`}>
 
-            {/* Entradas: sem carry → número grande; com carry → soma grande + individuais pequenos */}
-            <div className="text-right">
-              {carry !== 0 ? (
-                <>
-                  <span className={`block text-[9px] font-normal leading-tight
-                    ${carry >= 0 ? 'text-slate-400' : 'text-danger/70'}`}>
-                    {carry >= 0 ? '+' : ''}{formatCurrency(carry)} ant.
-                  </span>
-                  <span className="block text-[9px] font-normal leading-tight text-success/70">
-                    {hasData ? formatCurrency(row.entradas) : '—'}
-                  </span>
-                  <span className={`block text-xs font-bold leading-tight
-                    ${(carry + row.entradas) >= 0 ? 'text-success' : 'text-danger'}`}>
-                    {formatCurrency(carry + row.entradas)}
-                  </span>
-                </>
-              ) : (
-                <span className={`block text-xs font-bold
-                  ${hasData ? 'text-success' : 'text-slate-300'}`}>
-                  {hasData ? formatCurrency(row.entradas) : '—'}
-                </span>
-              )}
-            </div>
+            {/* Linha principal — clicável */}
+            <button
+              type="button"
+              onClick={() => setExpandedMonth(isExpanded ? null : i)}
+              className="w-full grid grid-cols-4 px-4 py-3 text-left active:bg-slate-50 transition-colors"
+            >
+              <span className={`text-xs font-medium flex items-center gap-1
+                ${isCurrentMonth ? 'text-primary' : 'text-slate-600'}`}>
+                {isCurrentMonth && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+                {MONTH_LABELS[i]}
+                {hasCarry && <span className="text-slate-300 text-[9px]">›</span>}
+              </span>
 
-            <span className={`text-xs text-right ${hasData ? 'text-danger font-medium' : 'text-slate-300'}`}>
-              {hasData ? formatCurrency(row.saidas) : '—'}
-            </span>
+              <span className={`text-xs text-right font-medium
+                ${hasData ? 'text-success' : 'text-slate-300'}`}>
+                {hasData ? formatCurrency(row.entradas) : '—'}
+              </span>
 
-            {/* Acumulado: número principal em destaque */}
-            <span className={`text-sm text-right font-bold
-              ${!showAcum ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
-              {showAcum ? formatCurrency(saldoAcum) : '—'}
-            </span>
+              <span className={`text-xs text-right font-medium
+                ${hasData ? 'text-danger' : 'text-slate-300'}`}>
+                {hasData ? formatCurrency(row.saidas) : '—'}
+              </span>
+
+              <span className={`text-xs text-right font-bold
+                ${!showAcum ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
+                {showAcum ? formatCurrency(saldoAcum) : '—'}
+              </span>
+            </button>
+
+            {/* Painel de detalhes — aparece ao clicar */}
+            {isExpanded && (hasData || hasCarry) && (
+              <div className="mx-4 mb-3 rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 space-y-1.5">
+                {hasCarry && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Saldo anterior</span>
+                    <span className={`font-medium ${carry >= 0 ? 'text-primary' : 'text-danger'}`}>
+                      {carry >= 0 ? '+' : ''}{formatCurrency(carry)}
+                    </span>
+                  </div>
+                )}
+                {hasData && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Entradas do mês</span>
+                    <span className="font-medium text-success">+{formatCurrency(row.entradas)}</span>
+                  </div>
+                )}
+                {hasData && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Saídas do mês</span>
+                    <span className="font-medium text-danger">-{formatCurrency(row.saidas)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs pt-1.5 border-t border-slate-200">
+                  <span className="font-semibold text-slate-700">= Acumulado</span>
+                  <span className={`font-bold ${saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
+                    {formatCurrency(saldoAcum)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )
       })}
