@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -24,10 +24,10 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
   const [conteudo, setConteudo] = useState('')
   const [cor, setCor] = useState('amarelo')
   const [saving, setSaving] = useState(false)
-  const textareaRef = useRef(null)
 
   const isEdit = !!editCard
 
+  // Inicializa / reseta campos ao abrir
   useEffect(() => {
     if (open) {
       setTitulo(editCard?.titulo ?? '')
@@ -39,24 +39,27 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
     }
   }, [open, editCard])
 
-  // Scroll lock iOS
+  // Scroll lock iOS (mesmo padrão do NovoRegistroModal)
   useEffect(() => {
     if (open) {
       const scrollY = window.scrollY
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
       document.body.style.width = '100%'
+      document.body.style.overflowY = 'scroll'
     } else {
       const scrollY = parseInt(document.body.style.top || '0') * -1
       document.body.style.position = ''
       document.body.style.top = ''
       document.body.style.width = ''
+      document.body.style.overflowY = ''
       window.scrollTo(0, scrollY)
     }
     return () => {
       document.body.style.position = ''
       document.body.style.top = ''
       document.body.style.width = ''
+      document.body.style.overflowY = ''
     }
   }, [open])
 
@@ -70,26 +73,25 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
   }
 
   const handleSave = async () => {
-    if (!titulo.trim()) {
-      textareaRef.current?.focus()
-      return
-    }
+    if (!titulo.trim()) return
     setSaving(true)
     try {
       if (isEdit) {
-        await supabase
+        const { error } = await supabase
           .from('observacoes')
           .update({ titulo: titulo.trim(), conteudo, cor, updated_at: new Date().toISOString() })
           .eq('id', editCard.id)
+        if (error) throw error
       } else {
-        await supabase
+        const { error } = await supabase
           .from('observacoes')
           .insert({ user_id: user.id, titulo: titulo.trim(), conteudo, cor })
+        if (error) throw error
       }
       onSaved()
       close()
     } catch (err) {
-      console.error(err)
+      console.error('Erro ao salvar nota:', err)
     } finally {
       setSaving(false)
     }
@@ -106,24 +108,26 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
 
   return (
     <>
+      {/* Overlay — z-[55] garante que cobre o BottomNav (z-40) */}
       <div
-        className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 bg-black/40 z-[55] transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
         onClick={close}
       />
+
+      {/* Sheet — z-[60] acima de tudo */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl
-          transition-transform duration-300 ease-out max-h-[92vh] flex flex-col
+        className={`fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-3xl shadow-2xl
+          transition-transform duration-300 ease-out max-h-[92vh] overflow-y-auto
           ${visible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+        <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
 
-        {/* Cabeçalho colorido */}
-        <div className={`${corMeta.header} px-5 py-4 flex-shrink-0`}>
-          <div className="flex items-center gap-3 mb-3">
-            {/* Paleta de cores */}
+        {/* Cabeçalho: paleta + título */}
+        <div className={`${corMeta.header} px-5 pt-3 pb-4`}>
+          <div className="flex items-center justify-between mb-3">
             <div className="flex gap-2 flex-wrap">
               {CORES.map(c => (
                 <button
@@ -131,48 +135,47 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
                   type="button"
                   onClick={() => setCor(c.id)}
                   className={`w-7 h-7 rounded-full ${c.dot} transition-all
-                    ${cor === c.id ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'opacity-70 hover:opacity-100'}`}
+                    ${cor === c.id ? 'ring-2 ring-offset-2 ring-slate-500 scale-110' : 'opacity-60 hover:opacity-100'}`}
                   title={c.label}
                 />
               ))}
             </div>
-            <div className="flex-1" />
-            <button onClick={close} className="w-7 h-7 rounded-full bg-black/10 flex items-center justify-center text-sm text-slate-700">
+            <button
+              onClick={close}
+              className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center text-sm text-slate-700 hover:bg-black/20 flex-shrink-0 ml-2"
+            >
               ✕
             </button>
           </div>
-
-          {/* Título */}
           <input
             type="text"
             value={titulo}
             onChange={e => setTitulo(e.target.value)}
             placeholder="Título da nota..."
             maxLength={80}
-            className={`w-full bg-transparent text-lg font-bold ${corMeta.title} placeholder-current/40 outline-none border-none`}
+            className={`w-full bg-transparent text-lg font-bold ${corMeta.title} placeholder-current/40 outline-none`}
           />
         </div>
 
-        {/* Conteúdo */}
-        <div className={`flex-1 overflow-y-auto ${corMeta.body}`}>
+        {/* Área de conteúdo */}
+        <div className={`${corMeta.body} px-5 py-4`}>
           <textarea
-            ref={textareaRef}
             value={conteudo}
             onChange={e => setConteudo(e.target.value)}
             placeholder="Escreva o que quiser aqui..."
-            className={`w-full h-full min-h-[200px] px-5 py-4 bg-transparent ${corMeta.text}
-              placeholder-current/30 outline-none resize-none text-sm leading-relaxed`}
+            rows={8}
+            className={`w-full bg-transparent ${corMeta.text} placeholder-current/30 outline-none resize-none text-sm leading-relaxed`}
           />
         </div>
 
-        {/* Rodapé com botões */}
-        <div className="px-5 py-4 pb-safe-or-6 bg-white border-t border-slate-100 flex gap-3 flex-shrink-0">
+        {/* Botões — dentro do scroll, sempre acessíveis */}
+        <div className="px-5 py-4 pb-10 bg-white border-t border-slate-100 flex gap-3">
           {isEdit && (
             <button
               type="button"
               onClick={handleDelete}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-danger text-sm font-semibold disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-500 text-sm font-semibold disabled:opacity-50 active:scale-95 transition-all"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                 <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -184,7 +187,8 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
             type="button"
             onClick={handleSave}
             disabled={saving || !titulo.trim()}
-            className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50 active:scale-95 transition-all"
+            className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-semibold
+              disabled:opacity-50 active:scale-95 transition-all"
           >
             {saving ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Criar nota'}
           </button>
@@ -205,14 +209,11 @@ function NoteCard({ card, onClick }) {
       className={`w-full text-left rounded-2xl border ${corMeta.border} overflow-hidden
         active:scale-[0.97] transition-transform shadow-sm`}
     >
-      {/* Header colorido */}
       <div className={`${corMeta.header} px-3 py-2.5`}>
         <p className={`text-sm font-bold ${corMeta.title} leading-tight line-clamp-2`}>
           {card.titulo}
         </p>
       </div>
-
-      {/* Corpo */}
       {preview && (
         <div className={`${corMeta.body} px-3 py-2.5`}>
           <p className={`text-xs ${corMeta.text} leading-relaxed line-clamp-6 whitespace-pre-wrap`}>
@@ -239,24 +240,15 @@ export default function ObservacoesPage() {
       .select('*')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
-
     if (!error) setNotes(data ?? [])
     setLoading(false)
   }
 
   useEffect(() => { fetchNotes() }, [user.id])
 
-  const openCreate = () => {
-    setEditCard(null)
-    setModalOpen(true)
-  }
+  const openCreate = () => { setEditCard(null); setModalOpen(true) }
+  const openEdit = (card) => { setEditCard(card); setModalOpen(true) }
 
-  const openEdit = (card) => {
-    setEditCard(card)
-    setModalOpen(true)
-  }
-
-  // Distribui cards em 2 colunas (esquerda / direita) de forma equilibrada
   const col1 = notes.filter((_, i) => i % 2 === 0)
   const col2 = notes.filter((_, i) => i % 2 === 1)
 
@@ -272,51 +264,34 @@ export default function ObservacoesPage() {
               {notes.length === 0 ? 'Nenhuma nota ainda' : `${notes.length} ${notes.length === 1 ? 'nota' : 'notas'}`}
             </p>
           </div>
-          <button
-            onClick={openCreate}
-            className="w-9 h-9 bg-white/15 hover:bg-white/25 rounded-xl flex items-center justify-center text-xl font-light transition-colors"
-          >
-            +
-          </button>
         </div>
       </div>
 
       {/* Conteúdo */}
       <div className="flex-1 overflow-y-auto pb-32">
         {loading ? (
-          // Skeleton
           <div className="px-4 pt-4 grid grid-cols-2 gap-3">
             {[140, 100, 180, 120, 90, 160].map((h, i) => (
               <div key={i} className="rounded-2xl bg-slate-100 animate-pulse" style={{ height: h }} />
             ))}
           </div>
         ) : notes.length === 0 ? (
-          // Estado vazio
           <div className="flex flex-col items-center justify-center py-20 text-center px-8">
             <div className="w-20 h-20 rounded-3xl bg-yellow-100 flex items-center justify-center text-4xl mb-5">
               📝
             </div>
             <p className="text-slate-700 font-bold text-lg">Nenhuma nota ainda</p>
             <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-              Crie notas coloridas para guardar lembretes, observações ou qualquer coisa importante.
+              Toque no + para criar sua primeira nota colorida.
             </p>
-            <button
-              onClick={openCreate}
-              className="mt-6 bg-primary text-white px-6 py-3 rounded-xl font-semibold text-sm active:scale-95 transition-all"
-            >
-              + Criar primeira nota
-            </button>
           </div>
         ) : (
-          // Grid de 2 colunas
           <div className="px-4 pt-4 flex gap-3 items-start">
-            {/* Coluna 1 */}
             <div className="flex-1 flex flex-col gap-3">
               {col1.map(card => (
                 <NoteCard key={card.id} card={card} onClick={() => openEdit(card)} />
               ))}
             </div>
-            {/* Coluna 2 */}
             <div className="flex-1 flex flex-col gap-3">
               {col2.map(card => (
                 <NoteCard key={card.id} card={card} onClick={() => openEdit(card)} />
@@ -330,15 +305,14 @@ export default function ObservacoesPage() {
       <button
         onClick={openCreate}
         className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg
-          flex items-center justify-center text-2xl font-light hover:bg-primary/90 active:scale-95
-          transition-all z-50"
+          flex items-center justify-center text-2xl font-light hover:bg-primary/90
+          active:scale-95 transition-all z-50"
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
         aria-label="Nova nota"
       >
         +
       </button>
 
-      {/* Modal */}
       <CardModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
