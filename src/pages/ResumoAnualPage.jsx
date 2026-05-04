@@ -183,20 +183,28 @@ function MonthlyTable({ monthlyData, currentYear }) {
               {MONTH_LABELS[i]}
             </span>
 
-            {/* Entradas: saldo anterior (pequeno/cinza) + entradas do mês (pequeno/verde) */}
+            {/* Entradas: sem carry → número grande; com carry → soma grande + individuais pequenos */}
             <div className="text-right">
               {carry !== 0 ? (
-                <span className={`block text-[9px] font-normal leading-tight
-                  ${carry >= 0 ? 'text-slate-400' : 'text-danger/60'}`}>
-                  {carry >= 0 ? '+' : ''}{formatCurrency(carry)}
-                </span>
+                <>
+                  <span className={`block text-[9px] font-normal leading-tight
+                    ${carry >= 0 ? 'text-slate-400' : 'text-danger/70'}`}>
+                    {carry >= 0 ? '+' : ''}{formatCurrency(carry)} ant.
+                  </span>
+                  <span className="block text-[9px] font-normal leading-tight text-success/70">
+                    {hasData ? formatCurrency(row.entradas) : '—'}
+                  </span>
+                  <span className={`block text-xs font-bold leading-tight
+                    ${(carry + row.entradas) >= 0 ? 'text-success' : 'text-danger'}`}>
+                    {formatCurrency(carry + row.entradas)}
+                  </span>
+                </>
               ) : (
-                <span className="block text-[9px] leading-tight text-slate-300">—</span>
+                <span className={`block text-xs font-bold
+                  ${hasData ? 'text-success' : 'text-slate-300'}`}>
+                  {hasData ? formatCurrency(row.entradas) : '—'}
+                </span>
               )}
-              <span className={`block text-[10px] font-medium leading-tight
-                ${hasData ? 'text-success' : 'text-slate-300'}`}>
-                {hasData ? formatCurrency(row.entradas) : '—'}
-              </span>
             </div>
 
             <span className={`text-xs text-right ${hasData ? 'text-danger font-medium' : 'text-slate-300'}`}>
