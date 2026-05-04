@@ -293,24 +293,21 @@ export default function NovoRegistroModal({
             : Math.random().toString(36).slice(2) + Date.now().toString(36)
         }
 
-        // Monta registros SEM os campos novos caso grupoId seja null
-        // (evita erro caso a migração SQL ainda não tenha sido executada)
+        // Monta registros — só inclui colunas opcionais quando têm valor
+        // (evita erros caso migrações SQL ainda não tenham sido executadas)
         const registros = Array.from({ length: n }, (_, i) => {
           const rec = {
             user_id: user.id,
-            data_registro: form.data,
             data_vencimento: addMonths(form.data, i),
             descricao: form.descricao.trim(),
             tipo: form.tipo,
             categoria: form.categoria,
             valor: valorUnitario,
-            valor_total: form.valor,
           }
           if (n > 1) {
             rec.parcela_atual = i + 1
             rec.total_parcelas = n
           }
-          // Só inclui colunas novas se existirem (após migração SQL)
           if (grupoId) {
             rec.grupo_recorrente = grupoId
             rec.tipo_repeticao = form.repeticao

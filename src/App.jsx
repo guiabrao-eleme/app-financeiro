@@ -66,17 +66,19 @@ function AppRouter() {
 
       <BottomNav active={navPage} onChange={setAppPage} />
 
-      {/* Botão flutuante + — acima do nav, respeita safe area do iPhone */}
-      <button
-        onClick={() => setShowModal(true)}
-        className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg
-          flex items-center justify-center text-2xl font-light hover:bg-primary/90 active:scale-95
-          transition-all z-50"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-        aria-label="Novo registro"
-      >
-        +
-      </button>
+      {/* Botão flutuante + — oculto na aba Notas (ela tem seu próprio FAB) */}
+      {appPage !== 'observacoes' && (
+        <button
+          onClick={() => setShowModal(true)}
+          className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg
+            flex items-center justify-center text-2xl font-light hover:bg-primary/90 active:scale-95
+            transition-all z-50"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+          aria-label="Novo registro"
+        >
+          +
+        </button>
+      )}
 
       {/* Modal global — funciona em qualquer aba */}
       <NovoRegistroModal

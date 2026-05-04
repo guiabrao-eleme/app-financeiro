@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -18,6 +18,7 @@ const getCor = (id) => CORES.find(c => c.id === id) ?? CORES[0]
 
 // ─── Modal de criar / editar card ────────────────────────────────────────────
 function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
+  const { user } = useAuth()
   const [visible, setVisible] = useState(false)
   const [titulo, setTitulo] = useState('')
   const [conteudo, setConteudo] = useState('')
@@ -83,7 +84,7 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
       } else {
         await supabase
           .from('observacoes')
-          .insert({ titulo: titulo.trim(), conteudo, cor })
+          .insert({ user_id: user.id, titulo: titulo.trim(), conteudo, cor })
       }
       onSaved()
       close()
@@ -324,6 +325,18 @@ export default function ObservacoesPage() {
           </div>
         )}
       </div>
+
+      {/* FAB — Nova nota */}
+      <button
+        onClick={openCreate}
+        className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg
+          flex items-center justify-center text-2xl font-light hover:bg-primary/90 active:scale-95
+          transition-all z-50"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+        aria-label="Nova nota"
+      >
+        +
+      </button>
 
       {/* Modal */}
       <CardModal
