@@ -158,7 +158,7 @@ function MonthlyTable({ monthlyData, currentYear }) {
         <span className="text-xs text-slate-400 font-medium">Mês</span>
         <span className="text-xs text-slate-400 font-medium text-right">Entradas</span>
         <span className="text-xs text-slate-400 font-medium text-right">Saídas</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Saldo</span>
+        <span className="text-xs text-slate-400 font-medium text-right">Acumulado</span>
       </div>
 
       {monthlyData.map((row, i) => {
@@ -195,7 +195,7 @@ function MonthlyTable({ monthlyData, currentYear }) {
 
       {/* Total anual */}
       <div className="grid grid-cols-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
-        <span className="text-xs font-bold text-slate-700">Total</span>
+        <span className="text-xs font-bold text-slate-700">Ano</span>
         <span className="text-xs font-bold text-success text-right">{formatCurrency(totEntradas)}</span>
         <span className="text-xs font-bold text-danger text-right">{formatCurrency(totSaidas)}</span>
         <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-primary' : 'text-danger'}`}>

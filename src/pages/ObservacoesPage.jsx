@@ -168,8 +168,11 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
           />
         </div>
 
-        {/* Botões — sticky no fundo do sheet, sempre visíveis */}
-        <div className="sticky bottom-0 px-5 py-4 pb-10 bg-white border-t border-slate-100 flex gap-3">
+        {/* Botões — sticky acima do BottomNav (pb = altura do nav + safe-area) */}
+        <div
+          className="sticky bottom-0 px-5 pt-4 bg-white border-t border-slate-100 flex gap-3"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 4.5rem)' }}
+        >
           {isEdit && (
             <button
               type="button"
