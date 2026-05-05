@@ -5,12 +5,29 @@ import { formatCurrency } from '../../utils/format'
 import { useToast } from '../ui/Toast'
 import CurrencyInput from './CurrencyInput'
 import { useCategories } from '../../hooks/useCategories'
+import { useCartoes, COR_MAP, getCorMeta } from '../../hooks/useCartoes'
 
 const EMOJIS_SUGERIDOS = [
   '🏠','🚗','🎓','🛍️','💰','📚','💼','🍀','🍕','✈️',
   '🏥','💊','🎮','🎬','🐕','🎂','💄','👗','👟','💻',
   '📱','🎵','🌮','🍔','🛒','⚽','🎁','💡','🔧','🎯',
   '🏋️','🌟','☕','🍷','🏖️','📦','💸','🎪','🎨','🔑',
+]
+
+const EMOJIS_BANCO = [
+  '🏦','💳','💵','💴','💶','💷','🪙','💰','🏧','📲',
+  '🟣','🟢','🔵','🟡','🟠','🔴','⚫','🟤',
+]
+
+const CORES_BANCO = [
+  { id: 'slate',  label: 'Cinza',   dot: 'bg-slate-400' },
+  { id: 'purple', label: 'Roxo',    dot: 'bg-purple-500' },
+  { id: 'blue',   label: 'Azul',    dot: 'bg-blue-500' },
+  { id: 'green',  label: 'Verde',   dot: 'bg-green-500' },
+  { id: 'pink',   label: 'Rosa',    dot: 'bg-pink-500' },
+  { id: 'orange', label: 'Laranja', dot: 'bg-orange-500' },
+  { id: 'red',    label: 'Vermelho',dot: 'bg-red-500' },
+  { id: 'yellow', label: 'Amarelo', dot: 'bg-yellow-400' },
 ]
 
 const todayStr = () => new Date().toISOString().split('T')[0]
@@ -21,7 +38,6 @@ const addMonths = (dateStr, months) => {
   return d.toISOString().split('T')[0]
 }
 
-// 10 anos como limite prático para "sem prazo"
 const MESES_INFINITO = 120
 
 const EMPTY_FORM = {
@@ -29,10 +45,11 @@ const EMPTY_FORM = {
   descricao: '',
   tipo: 'Saída',
   categoria: '',
+  cartao_id: null,
   valor: 0,
-  repeticao: 'unico',   // 'unico' | 'recorrente' | 'parcelado'
+  repeticao: 'unico',
   meses: 12,
-  infinito: false,       // true = sem prazo definido (120 meses)
+  infinito: false,
 }
 
 // ─── Formulário de nova categoria ────────────────────────────────────────────
@@ -98,7 +115,84 @@ function NewCategoryForm({ tipo, onCreated, onCancel, createCategory }) {
   )
 }
 
-// ─── Stepper de meses com input direto ───────────────────────────────────────
+// ─── Formulário de novo cartão ────────────────────────────────────────────────
+function NewCartaoForm({ onCreated, onCancel, createCartao }) {
+  const [nome, setNome] = useState('')
+  const [icone, setIcone] = useState('🏦')
+  const [cor, setCor] = useState('slate')
+  const [saving, setSaving] = useState(false)
+  const inputRef = useRef(null)
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 100) }, [])
+
+  const handleSave = async () => {
+    if (!nome.trim()) return
+    setSaving(true)
+    const { data, error } = await createCartao({ nome, icone, cor })
+    setSaving(false)
+    if (!error && data) onCreated(data)
+  }
+
+  return (
+    <div className="mt-3 bg-slate-50 dark:bg-slate-700 rounded-2xl p-4 border border-slate-200 dark:border-slate-600 space-y-3">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Novo cartão / conta</p>
+
+      {/* Emojis */}
+      <div className="flex flex-wrap gap-1.5">
+        {EMOJIS_BANCO.map(e => (
+          <button
+            key={e} type="button" onClick={() => setIcone(e)}
+            className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all
+              ${icone === e ? 'bg-primary/15 ring-2 ring-primary scale-110' : 'bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500'}`}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+
+      {/* Cores */}
+      <div className="flex gap-2 flex-wrap">
+        {CORES_BANCO.map(c => (
+          <button
+            key={c.id} type="button" onClick={() => setCor(c.id)}
+            className={`w-7 h-7 rounded-full ${c.dot} transition-all
+              ${cor === c.id ? 'ring-2 ring-offset-2 ring-slate-500 scale-110' : 'opacity-60 hover:opacity-100'}`}
+            title={c.label}
+          />
+        ))}
+      </div>
+
+      {/* Nome */}
+      <div className="flex items-center gap-2">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${getCorMeta(cor).bg}`}>
+          {icone}
+        </div>
+        <input
+          ref={inputRef}
+          type="text" value={nome}
+          onChange={e => setNome(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSave()}
+          placeholder="Ex: Nubank, Bradesco, Carteira..."
+          maxLength={30}
+          className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder-slate-400 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <button type="button" onClick={onCancel}
+          className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-500 text-slate-500 dark:text-slate-400 text-sm font-medium">
+          Cancelar
+        </button>
+        <button type="button" onClick={handleSave} disabled={!nome.trim() || saving}
+          className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50">
+          {saving ? 'Salvando...' : 'Criar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Stepper de meses ─────────────────────────────────────────────────────────
 function MesesStepper({ value, onChange, disabled }) {
   const [editing, setEditing] = useState(false)
   const [raw, setRaw] = useState('')
@@ -165,13 +259,15 @@ export default function NovoRegistroModal({
   const { user } = useAuth()
   const { addToast, ToastContainer } = useToast()
   const { categories, loading: catsLoading, deleteCategory, createCategory } = useCategories()
+  const { cartoes, loading: cartoesLoading, createCartao, deleteCartao } = useCartoes()
   const isEdit = !!editItem
 
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [visible, setVisible] = useState(false)
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState(false)       // nova categoria
+  const [creatingCartao, setCreatingCartao] = useState(false) // novo cartão
 
   // Scroll lock iOS
   useEffect(() => {
@@ -207,6 +303,7 @@ export default function NovoRegistroModal({
         descricao: editItem.descricao,
         tipo: editItem.tipo,
         categoria: editItem.categoria,
+        cartao_id: editItem.cartao_id ?? null,
         valor: Number(editItem.valor),
         repeticao: 'unico',
         meses: 12,
@@ -217,6 +314,7 @@ export default function NovoRegistroModal({
     }
     setErrors({})
     setCreating(false)
+    setCreatingCartao(false)
   }, [open, isEdit, editItem])
 
   if (!open) return null
@@ -239,7 +337,6 @@ export default function NovoRegistroModal({
     setSaving(true)
     try {
       if (isEdit) {
-        // ── Modo edição ───────────────────────────────────────────────────────
         if (editEscopo === 'este_e_proximos' && editItem.grupo_recorrente) {
           const { error: bulkError } = await supabase
             .from('lancamentos')
@@ -247,6 +344,7 @@ export default function NovoRegistroModal({
               descricao: form.descricao.trim(),
               tipo: form.tipo,
               categoria: form.categoria,
+              cartao_id: form.cartao_id,
               valor: form.valor,
             })
             .eq('grupo_recorrente', editItem.grupo_recorrente)
@@ -268,6 +366,7 @@ export default function NovoRegistroModal({
               descricao: form.descricao.trim(),
               tipo: form.tipo,
               categoria: form.categoria,
+              cartao_id: form.cartao_id,
               valor: form.valor,
             })
             .eq('id', editItem.id)
@@ -275,7 +374,6 @@ export default function NovoRegistroModal({
           addToast('Registro atualizado!', 'success')
         }
       } else {
-        // ── Modo criação ──────────────────────────────────────────────────────
         const isRepetindo = form.repeticao !== 'unico'
         const n = isRepetindo
           ? (form.infinito ? MESES_INFINITO : form.meses)
@@ -290,7 +388,6 @@ export default function NovoRegistroModal({
           grupoId = crypto.randomUUID()
         }
 
-        // Nível 1 — campos completos (requer migração SQL executada)
         const recsCompletos = Array.from({ length: n }, (_, i) => ({
           user_id: user.id,
           data_registro: form.data,
@@ -298,6 +395,7 @@ export default function NovoRegistroModal({
           descricao: form.descricao.trim(),
           tipo: form.tipo,
           categoria: form.categoria,
+          cartao_id: form.cartao_id,
           valor: valorUnitario,
           valor_total: form.valor,
           parcela_atual: i + 1,
@@ -305,7 +403,6 @@ export default function NovoRegistroModal({
           ...(grupoId && { grupo_recorrente: grupoId, tipo_repeticao: form.repeticao }),
         }))
 
-        // Nível 2 — sem colunas de grupo (sem grupo_recorrente/tipo_repeticao)
         const recsSemGrupo = Array.from({ length: n }, (_, i) => ({
           user_id: user.id,
           data_registro: form.data,
@@ -313,33 +410,18 @@ export default function NovoRegistroModal({
           descricao: form.descricao.trim(),
           tipo: form.tipo,
           categoria: form.categoria,
+          cartao_id: form.cartao_id,
           valor: valorUnitario,
           valor_total: form.valor,
           parcela_atual: i + 1,
           total_parcelas: n,
         }))
 
-        // Nível 3 — mínimo absoluto (sempre deve funcionar)
-        const recsMinimo = Array.from({ length: n }, (_, i) => ({
-          user_id: user.id,
-          data_registro: form.data,
-          data_vencimento: addMonths(form.data, i),
-          descricao: form.descricao.trim(),
-          tipo: form.tipo,
-          categoria: form.categoria,
-          valor: valorUnitario,
-          valor_total: form.valor,
-          parcela_atual: i + 1,
-          total_parcelas: n,
-        }))
-
-        // Tenta cada nível, parando no primeiro que funcionar
         let lastError = null
-        for (const tentativa of [recsCompletos, recsSemGrupo, recsMinimo]) {
+        for (const tentativa of [recsCompletos, recsSemGrupo]) {
           const { error } = await supabase.from('lancamentos').insert(tentativa)
           if (!error) { lastError = null; break }
           lastError = error
-          // Só tenta fallback se o erro for de coluna inexistente
           if (!error.message?.includes('does not exist') && !error.message?.includes('column')) break
         }
 
@@ -348,14 +430,13 @@ export default function NovoRegistroModal({
         const msg = isParcelado
           ? `${n} parcelas de ${formatCurrency(valorUnitario)} criadas!`
           : n > 1
-            ? form.infinito ? `${n} meses recorrentes criados!` : `${n} meses recorrentes criados!`
+            ? `${n} meses recorrentes criados!`
             : 'Registro salvo!'
         addToast(msg, 'success')
       }
       setTimeout(() => { onSaved(); handleClose() }, 1000)
     } catch (err) {
       console.error('Erro ao salvar:', err)
-      // Mostra a mensagem real do Supabase para facilitar o diagnóstico
       const msg = err?.message || err?.details || 'Erro desconhecido'
       addToast(`Erro: ${msg}`, 'error')
     } finally {
@@ -366,6 +447,7 @@ export default function NovoRegistroModal({
   const handleClose = () => {
     setVisible(false)
     setCreating(false)
+    setCreatingCartao(false)
     setTimeout(onClose, 280)
   }
 
@@ -380,7 +462,12 @@ export default function NovoRegistroModal({
     if (form.categoria === nome) set('categoria', '')
   }
 
-  // Número real de meses usado no resumo
+  const handleDeleteCartao = async (e, id) => {
+    e.stopPropagation()
+    await deleteCartao(id)
+    if (form.cartao_id === id) set('cartao_id', null)
+  }
+
   const mesesToUse = form.infinito ? MESES_INFINITO : form.meses
   const valorUnitario = form.repeticao === 'parcelado' && mesesToUse > 1
     ? form.valor / mesesToUse : form.valor
@@ -441,6 +528,84 @@ export default function NovoRegistroModal({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* ── Cartão / Conta ── */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Cartão / Conta
+                <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500 font-normal">opcional</span>
+              </label>
+            </div>
+
+            {cartoesLoading ? (
+              <div className="h-10 flex items-center text-slate-400 dark:text-slate-500 text-sm">Carregando...</div>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                {/* Opção "Nenhum" */}
+                <button
+                  type="button"
+                  onClick={() => set('cartao_id', null)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all
+                    ${form.cartao_id === null
+                      ? 'bg-slate-200 dark:bg-slate-600 border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200'
+                      : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500'}`}
+                >
+                  —
+                  <span>Nenhum</span>
+                </button>
+
+                {/* Cartões cadastrados */}
+                {cartoes.map(c => {
+                  const meta = getCorMeta(c.cor)
+                  const isSelected = form.cartao_id === c.id
+                  return (
+                    <div key={c.id} className="relative flex-shrink-0 group">
+                      <button
+                        type="button"
+                        onClick={() => set('cartao_id', c.id)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all
+                          ${isSelected
+                            ? `${meta.bg} ${meta.text} border-transparent ring-2 ring-offset-1 ring-primary/40`
+                            : `bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 ${meta.text}`}`}
+                      >
+                        <span>{c.icone}</span>
+                        <span>{c.nome}</span>
+                      </button>
+                      {/* Botão excluir */}
+                      <button
+                        type="button"
+                        onClick={e => handleDeleteCartao(e, c.id)}
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-danger text-white rounded-full text-[9px]
+                          opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-sm z-10"
+                        title="Remover"
+                      >✕</button>
+                    </div>
+                  )
+                })}
+
+                {/* Botão adicionar novo */}
+                {!creatingCartao && (
+                  <button
+                    type="button"
+                    onClick={() => setCreatingCartao(true)}
+                    className="flex-shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold border-2 border-dashed border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-primary hover:text-primary transition-all"
+                  >
+                    <span className="text-base leading-none">＋</span>
+                    <span>Novo</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {creatingCartao && (
+              <NewCartaoForm
+                createCartao={createCartao}
+                onCreated={(cartao) => { set('cartao_id', cartao.id); setCreatingCartao(false) }}
+                onCancel={() => setCreatingCartao(false)}
+              />
+            )}
           </div>
 
           {/* ── Data ── */}
@@ -548,7 +713,6 @@ export default function NovoRegistroModal({
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Repetição</label>
 
-              {/* Toggle de modo */}
               <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 gap-1 mb-3">
                 <button type="button" onClick={() => set('repeticao', 'unico')}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all
@@ -569,10 +733,8 @@ export default function NovoRegistroModal({
                 )}
               </div>
 
-              {/* Stepper de meses + toggle infinito */}
               {form.repeticao !== 'unico' && (
                 <>
-                  {/* Toggle "Sem prazo" — só para recorrente */}
                   {form.repeticao === 'recorrente' && (
                     <button
                       type="button"
@@ -587,14 +749,12 @@ export default function NovoRegistroModal({
                     </button>
                   )}
 
-                  {/* Stepper — desabilitado quando infinito */}
                   <MesesStepper
                     value={form.meses}
                     onChange={v => set('meses', v)}
                     disabled={form.infinito}
                   />
 
-                  {/* Resumo */}
                   {form.valor > 0 && (
                     <div className={`mt-3 rounded-xl px-4 py-3 border
                       ${form.repeticao === 'recorrente'
@@ -605,9 +765,7 @@ export default function NovoRegistroModal({
                         <>
                           <p className="text-success text-sm font-medium">
                             {formatCurrency(form.valor)} / mês
-                            {form.infinito
-                              ? ' · sem prazo definido'
-                              : ` por ${form.meses} meses`}
+                            {form.infinito ? ' · sem prazo definido' : ` por ${form.meses} meses`}
                           </p>
                           <p className="text-success/60 text-xs mt-0.5">
                             {form.infinito

@@ -11,6 +11,7 @@ import MonthYearPicker from '../components/ui/MonthYearPicker'
 import SkyToggle from '../components/ui/SkyToggle'
 import { downloadCSV, formatCSVCurrency } from '../utils/csv'
 import { useCategories, getCatMeta } from '../hooks/useCategories'
+import { useCartoes, getCorMeta } from '../hooks/useCartoes'
 
 const SORT_OPTIONS = [
   { id: 'data_desc',  label: '↓ Mais novo' },
@@ -46,8 +47,10 @@ function ListSkeleton() {
   )
 }
 
-function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onToggleSelect, categories }) {
+function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onToggleSelect, categories, cartoes }) {
   const meta = getCatMeta(item.categoria, categories)
+  const cartao = cartoes?.find(c => c.id === item.cartao_id) ?? null
+  const cartaoMeta = cartao ? getCorMeta(cartao.cor) : null
   const isEntrada = item.tipo === 'Entrada'
   const isRecorrente = item.tipo_repeticao === 'recorrente' && item.grupo_recorrente
   const isParcelado  = item.tipo_repeticao === 'parcelado'  && item.total_parcelas > 1
@@ -99,9 +102,16 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
             </span>
           )}
         </div>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-          {meta.icon} {item.categoria} · {formatDate(item.data_vencimento)}
-        </p>
+        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {meta.icon} {item.categoria} · {formatDate(item.data_vencimento)}
+          </p>
+          {cartao && (
+            <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${cartaoMeta.bg} ${cartaoMeta.text}`}>
+              {cartao.icone} {cartao.nome}
+            </span>
+          )}
+        </div>
       </div>
 
       <p className={`text-sm font-bold flex-shrink-0 ${isEntrada ? 'text-success' : 'text-danger'}`}>
@@ -141,6 +151,7 @@ export default function RegistrosPage({ showModal }) {
   const { isDark, toggleTheme } = useTheme()
   const { addToast, ToastContainer } = useToast()
   const { categories } = useCategories()
+  const { cartoes } = useCartoes()
 
   // Chips dinâmicos: fixos + categorias do usuário
   const chips = [
@@ -671,6 +682,7 @@ export default function RegistrosPage({ showModal }) {
                 selected={selectedIds.has(item.id)}
                 onToggleSelect={toggleSelect}
                 categories={categories}
+                cartoes={cartoes}
               />
             ))}
             {hasMore && (
