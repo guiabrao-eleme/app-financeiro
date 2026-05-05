@@ -75,7 +75,7 @@ export default function BottomNav({ active, onChange }) {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-40"
+      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 z-40"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div ref={containerRef} className="relative flex items-center justify-around px-1 py-1">
@@ -105,10 +105,10 @@ export default function BottomNav({ active, onChange }) {
               ref={el => { tabRefs.current[index] = el }}
               onClick={() => onChange(tab.id)}
               className={`relative z-10 flex flex-col items-center gap-0.5 py-2.5 px-4 rounded-2xl transition-colors duration-200
-                ${isActive ? 'text-white' : 'text-slate-400'}`}
+                ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}
             >
               {tab.icon(isActive)}
-              <span className={`text-[9px] font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>
+              <span className={`text-[9px] font-semibold ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                 {tab.label}
               </span>
             </button>

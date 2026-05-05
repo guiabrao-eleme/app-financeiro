@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import SkyToggle from '../components/ui/SkyToggle'
 import { formatCurrency } from '../utils/format'
 import { Skeleton } from '../components/ui/Skeleton'
 import { downloadCSV, formatCSVCurrency } from '../utils/csv'
@@ -56,8 +58,8 @@ function LineChart({ monthlyData }) {
   const yTicks = [0, 0.5, 1].map(t => minVal + t * range)
 
   return (
-    <div className="mx-4 bg-white rounded-2xl border border-slate-100 p-4">
-      <h3 className="text-sm font-semibold text-slate-700 mb-3">Evolução mensal</h3>
+    <div className="mx-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4">
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Evolução mensal</h3>
 
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 180 }}>
         {/* Linhas de guia */}
@@ -122,7 +124,7 @@ function LineChart({ monthlyData }) {
       {/* Legenda */}
       <div className="flex items-center justify-center gap-4 mt-2">
         {series.map(({ color, label }) => (
-          <span key={label} className="flex items-center gap-1.5 text-xs text-slate-500">
+          <span key={label} className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <span className="w-3 h-0.5 rounded-full inline-block" style={{ backgroundColor: color }} />
             {label}
           </span>
@@ -150,15 +152,15 @@ function MonthlyTable({ monthlyData, currentYear }) {
   }, [])
 
   return (
-    <div className="mx-4 bg-white rounded-2xl border border-slate-100 overflow-hidden">
-      <h3 className="text-sm font-semibold text-slate-700 px-4 pt-4 pb-3">Mês a mês</h3>
+    <div className="mx-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 px-4 pt-4 pb-3">Mês a mês</h3>
 
       {/* Cabeçalho */}
-      <div className="grid grid-cols-4 px-4 pb-2 border-b border-slate-100">
-        <span className="text-xs text-slate-400 font-medium">Mês</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Saldo</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Saídas</span>
-        <span className="text-xs text-slate-400 font-medium text-right">Resultado</span>
+      <div className="grid grid-cols-4 px-4 pb-2 border-b border-slate-100 dark:border-slate-700">
+        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Mês</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium text-right">Saldo</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium text-right">Saídas</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium text-right">Resultado</span>
       </div>
 
       {monthlyData.map((row, i) => {
@@ -170,16 +172,16 @@ function MonthlyTable({ monthlyData, currentYear }) {
         const isExpanded     = expandedMonth === i
 
         return (
-          <div key={i} className={`border-b border-slate-50 last:border-b-0 ${isCurrentMonth ? 'bg-primary/5' : ''}`}>
+          <div key={i} className={`border-b border-slate-50 dark:border-slate-700 last:border-b-0 ${isCurrentMonth ? 'bg-primary/5 dark:bg-primary/20' : ''}`}>
 
             {/* Linha principal — clicável */}
             <button
               type="button"
               onClick={() => setExpandedMonth(isExpanded ? null : i)}
-              className="w-full grid grid-cols-4 px-4 py-3 text-left active:bg-slate-50 transition-colors"
+              className="w-full grid grid-cols-4 px-4 py-3 text-left active:bg-slate-50 dark:active:bg-slate-700 transition-colors"
             >
               <span className={`text-xs font-medium flex items-center gap-1
-                ${isCurrentMonth ? 'text-primary' : 'text-slate-600'}`}>
+                ${isCurrentMonth ? 'text-primary' : 'text-slate-600 dark:text-slate-400'}`}>
                 {isCurrentMonth && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
                 {MONTH_LABELS[i]}
               </span>
@@ -202,10 +204,10 @@ function MonthlyTable({ monthlyData, currentYear }) {
 
             {/* Painel de detalhes — aparece ao clicar */}
             {isExpanded && (hasData || carry !== 0) && (
-              <div className="mx-4 mb-3 rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 space-y-1.5">
+              <div className="mx-4 mb-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 px-4 py-3 space-y-1.5">
                 {carry !== 0 && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Saldo anterior</span>
+                    <span className="text-slate-500 dark:text-slate-400">Saldo anterior</span>
                     <span className={`font-medium ${carry >= 0 ? 'text-primary' : 'text-danger'}`}>
                       {carry >= 0 ? '+' : ''}{formatCurrency(carry)}
                     </span>
@@ -213,18 +215,18 @@ function MonthlyTable({ monthlyData, currentYear }) {
                 )}
                 {hasData && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Entradas do mês</span>
+                    <span className="text-slate-500 dark:text-slate-400">Entradas do mês</span>
                     <span className="font-medium text-success">+{formatCurrency(row.entradas)}</span>
                   </div>
                 )}
                 {hasData && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Saídas do mês</span>
+                    <span className="text-slate-500 dark:text-slate-400">Saídas do mês</span>
                     <span className="font-medium text-danger">-{formatCurrency(row.saidas)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-xs pt-1.5 border-t border-slate-200">
-                  <span className="font-semibold text-slate-700">= Acumulado</span>
+                <div className="flex justify-between text-xs pt-1.5 border-t border-slate-200 dark:border-slate-600">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">= Acumulado</span>
                   <span className={`font-bold ${saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
                     {formatCurrency(saldoAcum)}
                   </span>
@@ -236,8 +238,8 @@ function MonthlyTable({ monthlyData, currentYear }) {
       })}
 
       {/* Total anual */}
-      <div className="grid grid-cols-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
-        <span className="text-xs font-bold text-slate-700">Ano</span>
+      <div className="grid grid-cols-4 px-4 py-3 bg-slate-50 dark:bg-slate-700 border-t border-slate-200 dark:border-slate-600">
+        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Ano</span>
         <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-primary' : 'text-danger'}`}>
           {formatCurrency(totSaldo)}
         </span>
@@ -263,8 +265,8 @@ function CategoryBreakdown({ categoryData, categories }) {
   if (rows.length === 0) return null
 
   return (
-    <div className="mx-4 bg-white rounded-2xl border border-slate-100 p-4">
-      <h3 className="text-sm font-semibold text-slate-700 mb-4">Saídas por categoria no ano</h3>
+    <div className="mx-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4">
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Saídas por categoria no ano</h3>
       <div className="space-y-3.5">
         {rows.map(({ cat, value }, idx) => {
           const pct = totalSaidas > 0 ? (value / totalSaidas) * 100 : 0
@@ -273,15 +275,15 @@ function CategoryBreakdown({ categoryData, categories }) {
           return (
             <div key={cat}>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="flex items-center gap-2 text-sm text-slate-700">
+                <span className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                   <span>{meta.icon}</span> {cat}
                 </span>
                 <div className="text-right">
                   <span className="text-sm font-semibold text-danger">{formatCurrency(value)}</span>
-                  <span className="text-[10px] text-slate-400 ml-1.5">{pct.toFixed(0)}%</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1.5">{pct.toFixed(0)}%</span>
                 </div>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${barColor}`}
                   style={{ width: `${pct}%` }}
@@ -311,6 +313,7 @@ function PageSkeleton() {
 
 export default function ResumoAnualPage() {
   const { user } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const { categories } = useCategories()
   const [year, setYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
@@ -383,7 +386,9 @@ export default function ResumoAnualPage() {
       <div className="bg-primary text-white px-4 pt-safe pb-5 shadow-md">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold">Resumo Anual</h1>
-          {hasAnyData && (
+          <div className="flex items-center gap-2">
+            <SkyToggle checked={isDark} onChange={toggleTheme} />
+            {hasAnyData && (
             <button
               onClick={handleExportCSV}
               title="Exportar CSV"
@@ -396,6 +401,7 @@ export default function ResumoAnualPage() {
               </svg>
             </button>
           )}
+          </div>
         </div>
         <div className="flex items-center justify-between bg-white/10 rounded-2xl px-4 py-2">
           <button
@@ -425,8 +431,8 @@ export default function ResumoAnualPage() {
             <path d="M42 67h12M42 74h8M66 67h12M66 74h8" stroke="#CBD5E1" strokeWidth="2" strokeLinecap="round"/>
             <path d="M48 30 L60 42 L72 30" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <h3 className="text-slate-700 font-semibold mb-1">Nenhum registro em {year}</h3>
-          <p className="text-slate-400 text-sm">Navegue para outro ano ou adicione lançamentos.</p>
+          <h3 className="text-slate-700 dark:text-slate-200 font-semibold mb-1">Nenhum registro em {year}</h3>
+          <p className="text-slate-400 dark:text-slate-500 text-sm">Navegue para outro ano ou adicione lançamentos.</p>
         </div>
       ) : (
         <div className="space-y-3 py-4">

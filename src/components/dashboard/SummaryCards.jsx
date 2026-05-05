@@ -22,21 +22,21 @@ export default function SummaryCards({ entradas, saidas, loading }) {
         label="Entradas"
         value={entradas}
         colorClass="text-success"
-        bgClass="bg-emerald-50"
+        bgClass="bg-emerald-50 dark:bg-emerald-900/20"
         loading={loading}
       />
       <Card
         label="Saídas"
         value={saidas}
         colorClass="text-danger"
-        bgClass="bg-red-50"
+        bgClass="bg-red-50 dark:bg-red-900/20"
         loading={loading}
       />
       <Card
         label="Saldo"
         value={saldo}
         colorClass={saldo >= 0 ? 'text-primary' : 'text-danger'}
-        bgClass="bg-blue-50"
+        bgClass="bg-blue-50 dark:bg-blue-900/20"
         loading={loading}
       />
     </div>

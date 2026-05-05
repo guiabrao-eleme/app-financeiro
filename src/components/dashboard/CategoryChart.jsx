@@ -18,8 +18,8 @@ export default function CategoryChart({ data, loading, categories = [] }) {
   const barHeight = 130
 
   return (
-    <div className="mx-4 bg-white rounded-2xl p-4 border border-slate-100">
-      <h3 className="text-sm font-semibold text-slate-700 mb-4">Por categoria</h3>
+    <div className="mx-4 bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Por categoria</h3>
 
       <div className="overflow-x-auto scrollbar-none">
         <div
@@ -48,7 +48,7 @@ export default function CategoryChart({ data, loading, categories = [] }) {
                   )}
                 </div>
                 <span className="text-lg leading-none">{meta.icon}</span>
-                <span className="text-[8px] text-slate-500 text-center leading-tight w-full truncate px-0.5">
+                <span className="text-[8px] text-slate-500 dark:text-slate-400 text-center leading-tight w-full truncate px-0.5">
                   {cat}
                 </span>
               </div>
@@ -58,10 +58,10 @@ export default function CategoryChart({ data, loading, categories = [] }) {
       </div>
 
       <div className="flex items-center gap-4 mt-3 justify-center">
-        <span className="flex items-center gap-1.5 text-xs text-slate-500">
+        <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           <span className="w-3 h-2 bg-success rounded-sm inline-block" /> Entradas
         </span>
-        <span className="flex items-center gap-1.5 text-xs text-slate-500">
+        <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           <span className="w-3 h-2 bg-danger rounded-sm inline-block" /> Saídas
         </span>
       </div>

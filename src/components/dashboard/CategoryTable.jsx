@@ -13,8 +13,8 @@ export default function CategoryTable({ data, totalSaidas, loading, categories =
   if (rows.length === 0) return null
 
   return (
-    <div className="mx-4 bg-white rounded-2xl p-4 border border-slate-100">
-      <h3 className="text-sm font-semibold text-slate-700 mb-3">Saídas por categoria</h3>
+    <div className="mx-4 bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Saídas por categoria</h3>
 
       <div className="space-y-3">
         {rows.map(({ cat, value }) => {
@@ -24,16 +24,16 @@ export default function CategoryTable({ data, totalSaidas, loading, categories =
           return (
             <div key={cat}>
               <div className="flex items-center justify-between mb-1">
-                <span className="flex items-center gap-2 text-sm text-slate-700">
+                <span className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                   <span>{meta.icon}</span>
                   {cat}
                 </span>
                 <div className="text-right">
                   <span className="text-sm font-semibold text-danger">{formatCurrency(value)}</span>
-                  <span className="text-[10px] text-slate-400 ml-1">{pct.toFixed(0)}%</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">{pct.toFixed(0)}%</span>
                 </div>
               </div>
-              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-danger/60 rounded-full transition-all duration-500"
                   style={{ width: `${pct}%` }}

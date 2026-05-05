@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import { supabase } from '../../lib/supabase'
 import MonthYearPicker from '../ui/MonthYearPicker'
+import SkyToggle from '../ui/SkyToggle'
 
 const COUPLE_PHOTO = '/foto-casal.jpg'
 
 export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToToday, onChangeMonth }) {
   const { user, signOut, updateUserMeta } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const name = user?.user_metadata?.full_name || user?.email || 'Usuário'
   const firstName = name.split(' ')[0]
   const [photoError, setPhotoError] = useState(false)
@@ -179,6 +182,7 @@ export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToTo
                 Hoje
               </button>
             )}
+            <SkyToggle checked={isDark} onChange={toggleTheme} />
             <button
               onClick={signOut}
               className="text-white/70 hover:text-white text-xs border border-white/20 px-3 py-1.5 rounded-lg transition-colors"

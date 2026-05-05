@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import SkyToggle from '../components/ui/SkyToggle'
 
 // ─── Paleta de cores dos cards ────────────────────────────────────────────────
 export const CORES = [
@@ -116,13 +118,13 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
 
       {/* Sheet — z-[60] acima de tudo */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-3xl shadow-2xl
+        className={`fixed inset-x-0 bottom-0 z-[60] bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl
           transition-transform duration-300 ease-out max-h-[92vh] overflow-y-auto
           ${visible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+          <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full" />
         </div>
 
         {/* Cabeçalho: paleta + título */}
@@ -170,7 +172,7 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
 
         {/* Botões — sticky acima do BottomNav (pb = altura do nav + safe-area) */}
         <div
-          className="sticky bottom-0 px-5 pt-4 bg-white border-t border-slate-100 flex gap-3"
+          className="sticky bottom-0 px-5 pt-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex gap-3"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 4.5rem)' }}
         >
           {isEdit && (
@@ -178,7 +180,7 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
               type="button"
               onClick={handleDelete}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-500 text-sm font-semibold disabled:opacity-50 active:scale-95 transition-all"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-sm font-semibold disabled:opacity-50 active:scale-95 transition-all"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                 <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -231,6 +233,7 @@ function NoteCard({ card, onClick }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function ObservacoesPage() {
   const { user } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -267,6 +270,7 @@ export default function ObservacoesPage() {
               {notes.length === 0 ? 'Nenhuma nota ainda' : `${notes.length} ${notes.length === 1 ? 'nota' : 'notas'}`}
             </p>
           </div>
+          <SkyToggle checked={isDark} onChange={toggleTheme} />
         </div>
       </div>
 
@@ -275,16 +279,16 @@ export default function ObservacoesPage() {
         {loading ? (
           <div className="px-4 pt-4 grid grid-cols-2 gap-3">
             {[140, 100, 180, 120, 90, 160].map((h, i) => (
-              <div key={i} className="rounded-2xl bg-slate-100 animate-pulse" style={{ height: h }} />
+              <div key={i} className="rounded-2xl bg-slate-100 dark:bg-slate-700 animate-pulse" style={{ height: h }} />
             ))}
           </div>
         ) : notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-            <div className="w-20 h-20 rounded-3xl bg-yellow-100 flex items-center justify-center text-4xl mb-5">
+            <div className="w-20 h-20 rounded-3xl bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center text-4xl mb-5">
               📝
             </div>
-            <p className="text-slate-700 font-bold text-lg">Nenhuma nota ainda</p>
-            <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+            <p className="text-slate-700 dark:text-slate-200 font-bold text-lg">Nenhuma nota ainda</p>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mt-2 leading-relaxed">
               Toque no + para criar sua primeira nota colorida.
             </p>
           </div>

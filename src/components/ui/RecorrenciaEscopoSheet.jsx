@@ -47,12 +47,12 @@ export default function RecorrenciaEscopoSheet({
 
       {/* Sheet */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl
+        className={`fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl
           transition-transform duration-300 ease-out
           ${visible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+          <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full" />
         </div>
 
         <div className="px-5 py-4 pb-safe-or-8">
@@ -61,11 +61,11 @@ export default function RecorrenciaEscopoSheet({
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl mx-auto mb-3">
               🔄
             </div>
-            <h3 className="text-base font-bold text-slate-800">Registro recorrente</h3>
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Registro recorrente</h3>
             {descricao && (
-              <p className="text-sm text-slate-400 mt-1 truncate px-4">"{descricao}"</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 mt-1 truncate px-4">"{descricao}"</p>
             )}
-            <p className="text-sm text-slate-500 mt-2">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
               {isDelete ? 'O que deseja excluir?' : 'O que deseja editar?'}
             </p>
           </div>
@@ -75,15 +75,15 @@ export default function RecorrenciaEscopoSheet({
             {/* Apenas este */}
             <button
               onClick={() => pick('apenas_este')}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100
-                hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] transition-all text-left"
+              className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-700
+                hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] transition-all text-left"
             >
-              <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-xl flex-shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xl flex-shrink-0">
                 📌
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800">Apenas este</p>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Apenas este</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {isDelete
                     ? 'Remove somente este registro'
                     : 'Altera somente este mês'}
@@ -108,7 +108,7 @@ export default function RecorrenciaEscopoSheet({
                 <p className={`text-sm font-semibold ${isDelete ? 'text-danger' : 'text-primary'}`}>
                   Este e os próximos
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {isDelete
                     ? 'Remove este e todos os registros futuros do grupo'
                     : 'Altera este e todos os registros futuros do grupo'}
@@ -119,7 +119,7 @@ export default function RecorrenciaEscopoSheet({
 
           <button
             onClick={close}
-            className="w-full py-3 rounded-xl text-slate-400 text-sm font-medium hover:text-slate-600 transition-colors"
+            className="w-full py-3 rounded-xl text-slate-400 dark:text-slate-500 text-sm font-medium hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             Cancelar
           </button>

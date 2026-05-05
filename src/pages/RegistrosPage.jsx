@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { formatCurrency, formatDate, getMonthRange, formatMonthYear } from '../utils/format'
 import { useToast } from '../components/ui/Toast'
 import { Skeleton } from '../components/ui/Skeleton'
 import NovoRegistroModal from '../components/forms/NovoRegistroModal'
 import RecorrenciaEscopoSheet from '../components/ui/RecorrenciaEscopoSheet'
 import MonthYearPicker from '../components/ui/MonthYearPicker'
+import SkyToggle from '../components/ui/SkyToggle'
 import { downloadCSV, formatCSVCurrency } from '../utils/csv'
 import { useCategories, getCatMeta } from '../hooks/useCategories'
 
@@ -31,7 +33,7 @@ function ListSkeleton() {
   return (
     <div className="space-y-0">
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50">
+        <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50 dark:border-slate-700">
           <Skeleton className="w-10 h-10 flex-shrink-0" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-3 w-3/4" />
@@ -52,16 +54,16 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
 
   return (
     <div
-      className={`flex items-center gap-3 py-3 px-4 bg-white border-b border-slate-50 transition-colors
-        ${selectionMode ? 'cursor-pointer active:bg-slate-50' : ''}
-        ${selected ? 'bg-primary/5 border-primary/10' : ''}`}
+      className={`flex items-center gap-3 py-3 px-4 bg-white dark:bg-slate-800 border-b border-slate-50 dark:border-slate-700 transition-colors
+        ${selectionMode ? 'cursor-pointer active:bg-slate-50 dark:active:bg-slate-700' : ''}
+        ${selected ? 'bg-primary/5 dark:bg-primary/20 border-primary/10' : ''}`}
       onClick={selectionMode ? () => onToggleSelect(item.id) : undefined}
     >
       {/* Checkbox ou ícone */}
       {selectionMode ? (
         <div
           className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
-            ${selected ? 'bg-primary border-primary' : 'border-slate-300 bg-white'}`}
+            ${selected ? 'bg-primary border-primary' : 'border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700'}`}
         >
           {selected && (
             <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
@@ -77,27 +79,27 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <p className="text-sm font-medium text-slate-800 truncate">{item.descricao}</p>
+          <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{item.descricao}</p>
           {/* Badge recorrente */}
           {isRecorrente && (
-            <span className="flex-shrink-0 text-[10px] bg-blue-50 text-blue-500 font-semibold px-1.5 py-0.5 rounded-full">
+            <span className="flex-shrink-0 text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-500 font-semibold px-1.5 py-0.5 rounded-full">
               🔄 recorrente
             </span>
           )}
           {/* Badge parcelado */}
           {isParcelado && (
-            <span className="flex-shrink-0 text-[10px] bg-slate-100 text-slate-500 font-semibold px-1.5 py-0.5 rounded-full">
+            <span className="flex-shrink-0 text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-semibold px-1.5 py-0.5 rounded-full">
               {item.parcela_atual}/{item.total_parcelas}
             </span>
           )}
           {/* Legado: parcelado sem tipo_repeticao */}
           {!isRecorrente && !isParcelado && item.total_parcelas > 1 && (
-            <span className="flex-shrink-0 text-[10px] bg-slate-100 text-slate-500 font-semibold px-1.5 py-0.5 rounded-full">
+            <span className="flex-shrink-0 text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-semibold px-1.5 py-0.5 rounded-full">
               {item.parcela_atual}/{item.total_parcelas}
             </span>
           )}
         </div>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
           {meta.icon} {item.categoria} · {formatDate(item.data_vencimento)}
         </p>
       </div>
@@ -110,7 +112,7 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
         <>
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(item) }}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
             aria-label="Editar"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
@@ -121,7 +123,7 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
 
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(item) }}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-danger hover:bg-red-50 transition-colors flex-shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-danger hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
             aria-label="Excluir"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
@@ -136,6 +138,7 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
 
 export default function RegistrosPage({ showModal }) {
   const { user } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const { addToast, ToastContainer } = useToast()
   const { categories } = useCategories()
 
@@ -499,6 +502,7 @@ export default function RegistrosPage({ showModal }) {
             >
               Todos
             </button>
+            <SkyToggle checked={isDark} onChange={toggleTheme} />
             <button
               onClick={handleExportCSV}
               title="Exportar CSV"
@@ -556,7 +560,7 @@ export default function RegistrosPage({ showModal }) {
       </div>
 
       {/* Chips de filtro */}
-      <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-none flex-shrink-0 bg-white border-b border-slate-100">
+      <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-none flex-shrink-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
         {chips.map(c => (
           <button
             key={c.id}
@@ -564,7 +568,7 @@ export default function RegistrosPage({ showModal }) {
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all
               ${chip === c.id
                 ? 'bg-primary text-white'
-                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
           >
             {c.label}
           </button>
@@ -572,8 +576,8 @@ export default function RegistrosPage({ showModal }) {
       </div>
 
       {/* Barra de ordenação + seleção */}
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-b border-slate-100 flex-shrink-0">
-        <span className="text-xs text-slate-400 flex-shrink-0">Ordenar:</span>
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
+        <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">Ordenar:</span>
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
           {SORT_OPTIONS.map(opt => (
             <button
@@ -581,8 +585,8 @@ export default function RegistrosPage({ showModal }) {
               onClick={() => setSortBy(opt.id)}
               className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                 ${sortBy === opt.id
-                  ? 'bg-primary/10 text-primary border border-primary/20'
-                  : 'bg-slate-50 text-slate-500 border border-slate-100 hover:bg-slate-100'}`}
+                  ? 'bg-primary/10 dark:bg-primary/20 text-primary border border-primary/20'
+                  : 'bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
             >
               {opt.label}
             </button>
@@ -597,7 +601,7 @@ export default function RegistrosPage({ showModal }) {
           className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border
             ${selectionMode
               ? 'bg-primary text-white border-primary'
-              : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'}`}
+              : 'bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
         >
           {selectionMode ? 'Cancelar' : 'Selecionar'}
         </button>
@@ -605,13 +609,13 @@ export default function RegistrosPage({ showModal }) {
 
       {/* Barra de seleção múltipla */}
       {selectionMode && (
-        <div className="flex items-center justify-between px-4 py-2.5 bg-primary/5 border-b border-primary/10 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-primary/5 dark:bg-primary/20 border-b border-primary/10 flex-shrink-0">
           <button
             onClick={toggleSelectAll}
             className="flex items-center gap-2 text-sm font-medium text-primary"
           >
             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all
-              ${allVisibleSelected ? 'bg-primary border-primary' : 'border-slate-300 bg-white'}`}>
+              ${allVisibleSelected ? 'bg-primary border-primary' : 'border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700'}`}>
               {allVisibleSelected && (
                 <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
                   <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -621,7 +625,7 @@ export default function RegistrosPage({ showModal }) {
             {allVisibleSelected ? 'Desmarcar todos' : 'Selecionar todos'}
           </button>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">{selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}</span>
             {selectedIds.size > 0 && (
               <button
                 onClick={deleteSelected}
@@ -650,8 +654,8 @@ export default function RegistrosPage({ showModal }) {
               <circle cx="82" cy="82" r="14" fill="#F1F5F9" stroke="#CBD5E1" strokeWidth="2"/>
               <path d="M78 82h8M82 78v8" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            <p className="text-slate-600 font-semibold">Nenhum registro encontrado</p>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-slate-600 dark:text-slate-300 font-semibold">Nenhum registro encontrado</p>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">
               {search || chip !== 'todos' ? 'Tente mudar os filtros ou a busca' : 'Toque no + para adicionar um lançamento'}
             </p>
           </div>
@@ -680,12 +684,12 @@ export default function RegistrosPage({ showModal }) {
 
       {/* Rodapé totalizador — padding right para não sobrepor o botão + */}
       {!loading && visible.length > 0 && !selectionMode && (
-        <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-slate-100 pl-4 pr-20 py-3 flex items-center justify-between z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-          <span className="text-xs text-slate-500">
+        <div className="fixed bottom-16 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 pl-4 pr-20 py-3 flex items-center justify-between z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {visible.length} {visible.length === 1 ? 'registro' : 'registros'}
           </span>
           <div className="text-right">
-            <p className="text-[10px] text-slate-400">Total saídas visíveis</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">Total saídas visíveis</p>
             <p className="text-sm font-bold text-danger">{formatCurrency(totalSaidasVisiveis)}</p>
           </div>
         </div>

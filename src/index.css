@@ -1,3 +1,16 @@
+:root {
+  --color-background: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F1F5F9;
+  --color-border: #E2E8F0;
+}
+.dark {
+  --color-background: #0F172A;
+  --color-surface: #1E293B;
+  --color-surface-2: #334155;
+  --color-border: #334155;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

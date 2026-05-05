@@ -84,11 +84,11 @@ export default function DashboardPage({ showModal }) {
 
       {!loading && lancamentos.length === 0 && (
         <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
-          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+          <div className="w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
             <span className="text-4xl">📊</span>
           </div>
-          <h3 className="text-slate-700 font-semibold mb-1">Nenhum registro neste mês</h3>
-          <p className="text-slate-400 text-sm">
+          <h3 className="text-slate-700 dark:text-slate-200 font-semibold mb-1">Nenhum registro neste mês</h3>
+          <p className="text-slate-400 dark:text-slate-500 text-sm">
             Toque no <strong>+</strong> para adicionar seu primeiro lançamento.
           </p>
         </div>

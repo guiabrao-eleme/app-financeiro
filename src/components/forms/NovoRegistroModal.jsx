@@ -54,15 +54,15 @@ function NewCategoryForm({ tipo, onCreated, onCancel, createCategory }) {
   }
 
   return (
-    <div className="mt-3 bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nova categoria</p>
+    <div className="mt-3 bg-slate-50 dark:bg-slate-700 rounded-2xl p-4 border border-slate-200 dark:border-slate-600 space-y-3">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Nova categoria</p>
 
       <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
         {EMOJIS_SUGERIDOS.map(e => (
           <button
             key={e} type="button" onClick={() => setIcone(e)}
             className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all
-              ${icone === e ? 'bg-primary/15 ring-2 ring-primary scale-110' : 'bg-white border border-slate-200 hover:bg-slate-100'}`}
+              ${icone === e ? 'bg-primary/15 ring-2 ring-primary scale-110' : 'bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-500'}`}
           >
             {e}
           </button>
@@ -80,13 +80,13 @@ function NewCategoryForm({ tipo, onCreated, onCancel, createCategory }) {
           onKeyDown={e => e.key === 'Enter' && handleSave()}
           placeholder="Nome da categoria..."
           maxLength={30}
-          className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+          className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder-slate-400 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
         />
       </div>
 
       <div className="flex gap-2">
         <button type="button" onClick={onCancel}
-          className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-medium">
+          className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-500 text-slate-500 dark:text-slate-400 text-sm font-medium">
           Cancelar
         </button>
         <button type="button" onClick={handleSave} disabled={!nome.trim() || saving}
@@ -121,7 +121,7 @@ function MesesStepper({ value, onChange, disabled }) {
     <div className={`flex items-center gap-3 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
       <button type="button"
         onClick={() => onChange(Math.max(2, value - 1))}
-        className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">
+        className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-600 flex items-center justify-center text-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all">
         −
       </button>
 
@@ -135,19 +135,19 @@ function MesesStepper({ value, onChange, disabled }) {
             onChange={e => setRaw(e.target.value)}
             onBlur={commitEdit}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitEdit() } }}
-            className="w-20 text-center text-2xl font-bold text-slate-800 outline-none bg-transparent border-b-2 border-primary"
+            className="w-20 text-center text-2xl font-bold text-slate-800 dark:text-slate-100 outline-none bg-transparent border-b-2 border-primary"
           />
         ) : (
-          <span className="text-2xl font-bold text-slate-800 cursor-pointer border-b-2 border-transparent hover:border-slate-300 transition-all">
+          <span className="text-2xl font-bold text-slate-800 dark:text-slate-100 cursor-pointer border-b-2 border-transparent hover:border-slate-300 dark:hover:border-slate-500 transition-all">
             {value}
           </span>
         )}
-        <span className="text-slate-400 text-sm ml-1">meses</span>
+        <span className="text-slate-400 dark:text-slate-500 text-sm ml-1">meses</span>
       </div>
 
       <button type="button"
         onClick={() => onChange(Math.min(600, value + 1))}
-        className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">
+        className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-600 flex items-center justify-center text-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all">
         +
       </button>
     </div>
@@ -398,17 +398,17 @@ export default function NovoRegistroModal({
         onClick={handleClose}
       />
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl
+        className={`fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl
           transition-transform duration-300 ease-out max-h-[92vh] overflow-y-auto
           ${visible ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+          <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full" />
         </div>
 
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700">
           <div>
-            <h2 className="text-base font-bold text-slate-800">
+            <h2 className="text-base font-bold text-slate-800 dark:text-slate-200">
               {isEdit ? 'Editar Registro' : 'Novo Registro'}
             </h2>
             {showEscopoBadge && (
@@ -418,7 +418,7 @@ export default function NovoRegistroModal({
             )}
           </div>
           <button onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600">
             ✕
           </button>
         </div>
@@ -427,15 +427,15 @@ export default function NovoRegistroModal({
 
           {/* ── Tipo ── */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
-            <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tipo</label>
+            <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 gap-1">
               {['Entrada', 'Saída'].map(tipo => (
                 <button key={tipo} type="button"
                   onClick={() => { set('tipo', tipo); set('categoria', ''); set('repeticao', 'unico') }}
                   className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all
                     ${form.tipo === tipo
                       ? tipo === 'Entrada' ? 'bg-success text-white shadow-sm' : 'bg-danger text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'}`}
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
                   {tipo === 'Entrada' ? '↑ Entrada' : '↓ Saída'}
                 </button>
@@ -445,17 +445,17 @@ export default function NovoRegistroModal({
 
           {/* ── Data ── */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               {isEdit ? 'Data de vencimento' : 'Data'}
             </label>
             <div className="flex gap-2">
               <input type="date" value={form.data} onChange={e => set('data', e.target.value)}
-                className={`flex-1 px-4 py-3 rounded-xl border text-sm outline-none transition-all
-                  ${errors.data ? 'border-danger bg-red-50' : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
+                className={`flex-1 px-4 py-3 rounded-xl border text-sm outline-none transition-all dark:bg-slate-700 dark:text-slate-100
+                  ${errors.data ? 'border-danger bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
               />
               {!isEdit && (
                 <button type="button" onClick={() => set('data', todayStr())}
-                  className="px-4 py-3 rounded-xl border border-slate-200 text-sm text-primary font-medium hover:bg-primary/5 whitespace-nowrap">
+                  className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 text-sm text-primary font-medium hover:bg-primary/5 whitespace-nowrap dark:hover:bg-primary/20">
                   Hoje
                 </button>
               )}
@@ -465,21 +465,21 @@ export default function NovoRegistroModal({
 
           {/* ── Descrição ── */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Descrição</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descrição</label>
             <input type="text" value={form.descricao} onChange={e => set('descricao', e.target.value)}
               placeholder="Ex: Mercado, Salário, Conta de luz..."
-              className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all
-                ${errors.descricao ? 'border-danger bg-red-50' : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
+              className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400
+                ${errors.descricao ? 'border-danger bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
             />
             {errors.descricao && <p className="text-danger text-xs mt-1">{errors.descricao}</p>}
           </div>
 
           {/* ── Categoria ── */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Categoria</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Categoria</label>
 
             {catsLoading ? (
-              <div className="h-16 flex items-center justify-center text-slate-400 text-sm">Carregando...</div>
+              <div className="h-16 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">Carregando...</div>
             ) : catsParaTipo.length === 0 && !creating ? (
               <div className="text-center py-4 text-slate-400 text-sm">
                 <p className="mb-3">Nenhuma categoria ainda.</p>
@@ -497,8 +497,8 @@ export default function NovoRegistroModal({
                       <button type="button" onClick={() => set('categoria', cat.nome)}
                         className={`w-full flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border text-xs font-medium transition-all
                           ${isSelected
-                            ? 'border-primary bg-primary/5 text-primary ring-2 ring-primary/20'
-                            : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
+                            ? 'border-primary bg-primary/5 dark:bg-primary/20 text-primary ring-2 ring-primary/20'
+                            : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                       >
                         <span className="text-2xl">{cat.icone}</span>
                         <span className="text-[11px] leading-tight text-center line-clamp-2">{cat.nome}</span>
@@ -514,7 +514,7 @@ export default function NovoRegistroModal({
                 })}
                 {!creating && (
                   <button type="button" onClick={() => setCreating(true)}
-                    className="flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-primary hover:text-primary transition-all">
+                    className="flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-primary hover:text-primary transition-all">
                     <span className="text-2xl">＋</span>
                     <span className="text-[11px]">Nova</span>
                   </button>
@@ -536,7 +536,7 @@ export default function NovoRegistroModal({
 
           {/* ── Valor ── */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               {form.repeticao === 'parcelado' ? 'Valor total' : 'Valor'}
             </label>
             <CurrencyInput value={form.valor} onChange={val => set('valor', val)} error={errors.valor} />
@@ -546,24 +546,24 @@ export default function NovoRegistroModal({
           {/* ── Repetição (apenas criação) ── */}
           {!isEdit && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Repetição</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Repetição</label>
 
               {/* Toggle de modo */}
-              <div className="flex bg-slate-100 rounded-xl p-1 gap-1 mb-3">
+              <div className="flex bg-slate-100 dark:bg-slate-700 rounded-xl p-1 gap-1 mb-3">
                 <button type="button" onClick={() => set('repeticao', 'unico')}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all
-                    ${form.repeticao === 'unico' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                    ${form.repeticao === 'unico' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
                   Único
                 </button>
                 <button type="button" onClick={() => set('repeticao', 'recorrente')}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all
-                    ${form.repeticao === 'recorrente' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                    ${form.repeticao === 'recorrente' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
                   🔄 Recorrente
                 </button>
                 {form.tipo === 'Saída' && (
                   <button type="button" onClick={() => set('repeticao', 'parcelado')}
                     className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all
-                      ${form.repeticao === 'parcelado' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
+                      ${form.repeticao === 'parcelado' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
                     💳 Parcelado
                   </button>
                 )}
