@@ -181,23 +181,23 @@ function MonthlyTable({ monthlyData, currentYear }) {
               className="w-full grid grid-cols-4 px-4 py-3 text-left active:bg-slate-50 dark:active:bg-slate-700 transition-colors"
             >
               <span className={`text-xs font-medium flex items-center gap-1
-                ${isCurrentMonth ? 'text-primary' : 'text-slate-600 dark:text-slate-400'}`}>
-                {isCurrentMonth && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+                ${isCurrentMonth ? 'text-primary dark:text-blue-300' : 'text-slate-600 dark:text-slate-400'}`}>
+                {isCurrentMonth && <span className="w-1.5 h-1.5 rounded-full bg-primary dark:bg-blue-300 flex-shrink-0" />}
                 {MONTH_LABELS[i]}
               </span>
 
               <span className={`text-xs text-right font-bold
-                ${!showAcum ? 'text-slate-300' : saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
+                ${!showAcum ? 'text-slate-300 dark:text-slate-600' : saldoAcum >= 0 ? 'text-primary dark:text-blue-300' : 'text-danger dark:text-red-400'}`}>
                 {showAcum ? formatCurrency(saldoAcum) : '—'}
               </span>
 
               <span className={`text-xs text-right font-medium
-                ${hasData ? 'text-danger' : 'text-slate-300'}`}>
+                ${hasData ? 'text-danger dark:text-red-400' : 'text-slate-300 dark:text-slate-600'}`}>
                 {hasData ? formatCurrency(row.saidas) : '—'}
               </span>
 
               <span className={`text-xs text-right font-medium
-                ${!hasData ? 'text-slate-300' : (row.entradas - row.saidas) >= 0 ? 'text-success' : 'text-danger'}`}>
+                ${!hasData ? 'text-slate-300 dark:text-slate-600' : (row.entradas - row.saidas) >= 0 ? 'text-success dark:text-emerald-400' : 'text-danger dark:text-red-400'}`}>
                 {hasData ? formatCurrency(row.entradas - row.saidas) : '—'}
               </span>
             </button>
@@ -208,7 +208,7 @@ function MonthlyTable({ monthlyData, currentYear }) {
                 {carry !== 0 && (
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500 dark:text-slate-400">Saldo anterior</span>
-                    <span className={`font-medium ${carry >= 0 ? 'text-primary' : 'text-danger'}`}>
+                    <span className={`font-medium ${carry >= 0 ? 'text-primary dark:text-blue-300' : 'text-danger dark:text-red-400'}`}>
                       {carry >= 0 ? '+' : ''}{formatCurrency(carry)}
                     </span>
                   </div>
@@ -216,18 +216,18 @@ function MonthlyTable({ monthlyData, currentYear }) {
                 {hasData && (
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500 dark:text-slate-400">Entradas do mês</span>
-                    <span className="font-medium text-success">+{formatCurrency(row.entradas)}</span>
+                    <span className="font-medium text-success dark:text-emerald-400">+{formatCurrency(row.entradas)}</span>
                   </div>
                 )}
                 {hasData && (
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500 dark:text-slate-400">Saídas do mês</span>
-                    <span className="font-medium text-danger">-{formatCurrency(row.saidas)}</span>
+                    <span className="font-medium text-danger dark:text-red-400">-{formatCurrency(row.saidas)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xs pt-1.5 border-t border-slate-200 dark:border-slate-600">
                   <span className="font-semibold text-slate-700 dark:text-slate-300">= Acumulado</span>
-                  <span className={`font-bold ${saldoAcum >= 0 ? 'text-primary' : 'text-danger'}`}>
+                  <span className={`font-bold ${saldoAcum >= 0 ? 'text-primary dark:text-blue-300' : 'text-danger dark:text-red-400'}`}>
                     {formatCurrency(saldoAcum)}
                   </span>
                 </div>
@@ -240,11 +240,11 @@ function MonthlyTable({ monthlyData, currentYear }) {
       {/* Total anual */}
       <div className="grid grid-cols-4 px-4 py-3 bg-slate-50 dark:bg-slate-700 border-t border-slate-200 dark:border-slate-600">
         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Ano</span>
-        <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-primary' : 'text-danger'}`}>
+        <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-primary dark:text-blue-300' : 'text-danger dark:text-red-400'}`}>
           {formatCurrency(totSaldo)}
         </span>
-        <span className="text-xs font-bold text-danger text-right">{formatCurrency(totSaidas)}</span>
-        <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-success' : 'text-danger'}`}>
+        <span className="text-xs font-bold text-danger dark:text-red-400 text-right">{formatCurrency(totSaidas)}</span>
+        <span className={`text-xs font-bold text-right ${totSaldo >= 0 ? 'text-success dark:text-emerald-400' : 'text-danger dark:text-red-400'}`}>
           {formatCurrency(totEntradas - totSaidas)}
         </span>
       </div>

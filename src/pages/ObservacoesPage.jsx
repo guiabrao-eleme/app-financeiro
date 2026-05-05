@@ -259,67 +259,74 @@ export default function ObservacoesPage() {
   const col2 = notes.filter((_, i) => i % 2 === 1)
 
   return (
-    <div className="min-h-screen bg-background flex flex-col page-enter">
+    <>
+      {/* page-enter fica apenas no conteúdo, FORA do CardModal.
+          CSS: position:fixed dentro de um elemento com transform
+          fica contido nele — por isso o modal precisa estar fora. */}
+      <div className="min-h-screen bg-background flex flex-col page-enter">
 
-      {/* Header */}
-      <div className="bg-primary text-white px-4 pt-safe pb-4 shadow-md flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold">Observações</h1>
-            <p className="text-white/60 text-xs mt-0.5">
-              {notes.length === 0 ? 'Nenhuma nota ainda' : `${notes.length} ${notes.length === 1 ? 'nota' : 'notas'}`}
-            </p>
+        {/* Header */}
+        <div className="bg-primary text-white px-4 pt-safe pb-4 shadow-md flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-bold">Observações</h1>
+              <p className="text-white/60 text-xs mt-0.5">
+                {notes.length === 0 ? 'Nenhuma nota ainda' : `${notes.length} ${notes.length === 1 ? 'nota' : 'notas'}`}
+              </p>
+            </div>
+            <SkyToggle checked={isDark} onChange={toggleTheme} />
           </div>
-          <SkyToggle checked={isDark} onChange={toggleTheme} />
         </div>
-      </div>
 
-      {/* Conteúdo */}
-      <div className="flex-1 overflow-y-auto pb-32">
-        {loading ? (
-          <div className="px-4 pt-4 grid grid-cols-2 gap-3">
-            {[140, 100, 180, 120, 90, 160].map((h, i) => (
-              <div key={i} className="rounded-2xl bg-slate-100 dark:bg-slate-700 animate-pulse" style={{ height: h }} />
-            ))}
-          </div>
-        ) : notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-            <div className="w-20 h-20 rounded-3xl bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center text-4xl mb-5">
-              📝
-            </div>
-            <p className="text-slate-700 dark:text-slate-200 font-bold text-lg">Nenhuma nota ainda</p>
-            <p className="text-slate-400 dark:text-slate-500 text-sm mt-2 leading-relaxed">
-              Toque no + para criar sua primeira nota colorida.
-            </p>
-          </div>
-        ) : (
-          <div className="px-4 pt-4 flex gap-3 items-start">
-            <div className="flex-1 flex flex-col gap-3">
-              {col1.map(card => (
-                <NoteCard key={card.id} card={card} onClick={() => openEdit(card)} />
+        {/* Conteúdo */}
+        <div className="flex-1 overflow-y-auto pb-32">
+          {loading ? (
+            <div className="px-4 pt-4 grid grid-cols-2 gap-3">
+              {[140, 100, 180, 120, 90, 160].map((h, i) => (
+                <div key={i} className="rounded-2xl bg-slate-100 dark:bg-slate-700 animate-pulse" style={{ height: h }} />
               ))}
             </div>
-            <div className="flex-1 flex flex-col gap-3">
-              {col2.map(card => (
-                <NoteCard key={card.id} card={card} onClick={() => openEdit(card)} />
-              ))}
+          ) : notes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+              <div className="w-20 h-20 rounded-3xl bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center text-4xl mb-5">
+                📝
+              </div>
+              <p className="text-slate-700 dark:text-slate-200 font-bold text-lg">Nenhuma nota ainda</p>
+              <p className="text-slate-400 dark:text-slate-500 text-sm mt-2 leading-relaxed">
+                Toque no + para criar sua primeira nota colorida.
+              </p>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="px-4 pt-4 flex gap-3 items-start">
+              <div className="flex-1 flex flex-col gap-3">
+                {col1.map(card => (
+                  <NoteCard key={card.id} card={card} onClick={() => openEdit(card)} />
+                ))}
+              </div>
+              <div className="flex-1 flex flex-col gap-3">
+                {col2.map(card => (
+                  <NoteCard key={card.id} card={card} onClick={() => openEdit(card)} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* FAB — Nova nota */}
+        <button
+          onClick={openCreate}
+          className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg
+            flex items-center justify-center text-2xl font-light hover:bg-primary/90
+            active:scale-95 transition-all z-50"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+          aria-label="Nova nota"
+        >
+          +
+        </button>
       </div>
 
-      {/* FAB — Nova nota */}
-      <button
-        onClick={openCreate}
-        className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg
-          flex items-center justify-center text-2xl font-light hover:bg-primary/90
-          active:scale-95 transition-all z-50"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-        aria-label="Nova nota"
-      >
-        +
-      </button>
-
+      {/* Modal fora do page-enter para evitar que o transform da animação
+          quebre o position:fixed e oculte o modal atrás do BottomNav */}
       <CardModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -327,6 +334,6 @@ export default function ObservacoesPage() {
         onDeleted={fetchNotes}
         editCard={editCard}
       />
-    </div>
+    </>
   )
 }
