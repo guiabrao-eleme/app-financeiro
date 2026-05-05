@@ -168,6 +168,7 @@ export default function RegistrosPage({ showModal }) {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [chip, setChip] = useState('todos')
+  const [cartaoFilter, setCartaoFilter] = useState(null) // null = todos
   const [sortBy, setSortBy] = useState('data_desc')
   const [page, setPage] = useState(1)
 
@@ -234,7 +235,7 @@ export default function RegistrosPage({ showModal }) {
   useEffect(() => {
     setSelectionMode(false)
     setSelectedIds(new Set())
-  }, [search, chip, sortBy, year, month, allMonths])
+  }, [search, chip, cartaoFilter, sortBy, year, month, allMonths])
 
   // Filtragem
   const filtered = allItems.filter(item => {
@@ -248,7 +249,8 @@ export default function RegistrosPage({ showModal }) {
       chip === 'recorrentes' ? item.tipo_repeticao === 'recorrente' :
       chip === 'parcelados'  ? item.tipo_repeticao === 'parcelado' :
       item.categoria === chip
-    return matchSearch && matchChip
+    const matchCartao = cartaoFilter === null ? true : item.cartao_id === cartaoFilter
+    return matchSearch && matchChip && matchCartao
   })
 
   // Ordenação
@@ -280,7 +282,7 @@ export default function RegistrosPage({ showModal }) {
     return () => obs.disconnect()
   }, [hasMore, sorted.length])
 
-  useEffect(() => { setPage(1) }, [search, chip, sortBy, year, month, allMonths])
+  useEffect(() => { setPage(1) }, [search, chip, cartaoFilter, sortBy, year, month, allMonths])
 
   // ─── Soft delete de um item (com undo) ──────────────────────────────────────
   const softDelete = useCallback((item) => {
@@ -585,6 +587,37 @@ export default function RegistrosPage({ showModal }) {
           </button>
         ))}
       </div>
+
+      {/* Filtro de cartões (só aparece se houver pelo menos 1 cartão cadastrado) */}
+      {cartoes.length > 0 && (
+        <div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-none flex-shrink-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
+          <button
+            onClick={() => setCartaoFilter(null)}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all
+              ${cartaoFilter === null
+                ? 'bg-primary text-white'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
+          >
+            🏦 Todos os cartões
+          </button>
+          {cartoes.map(c => {
+            const meta = getCorMeta(c.cor)
+            const isActive = cartaoFilter === c.id
+            return (
+              <button
+                key={c.id}
+                onClick={() => setCartaoFilter(c.id)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all
+                  ${isActive
+                    ? `${meta.bg} ${meta.text} ring-2 ring-offset-1 ring-primary/30`
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
+              >
+                {c.icone} {c.nome}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Barra de ordenação + seleção */}
       <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
