@@ -264,8 +264,18 @@ export default function RegistrosPage({ showModal }) {
     }
   })
 
-  const visible = sorted.slice(0, page * PAGE_SIZE)
-  const hasMore = visible.length < sorted.length
+  // Deduplicar recorrentes — cada série aparece uma vez só (a mais recente)
+  const seenRecorrente = new Set()
+  const deduped = sorted.filter(item => {
+    if (item.tipo_repeticao === 'recorrente' && item.grupo_recorrente) {
+      if (seenRecorrente.has(item.grupo_recorrente)) return false
+      seenRecorrente.add(item.grupo_recorrente)
+    }
+    return true
+  })
+
+  const visible = deduped.slice(0, page * PAGE_SIZE)
+  const hasMore = visible.length < deduped.length
 
   const totalSaidasVisiveis = visible
     .filter(i => i.tipo === 'Saída')
