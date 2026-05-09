@@ -38,14 +38,14 @@ export default function CurrencyInput({ value, onChange, error, placeholder = '0
   }
 
   return (
-    <div className={`flex items-center w-full border rounded-xl px-4 py-3 gap-2 transition-all
+    <div className={`flex items-center w-full border rounded-xl px-4 py-3 gap-2 transition-all dark:bg-slate-700
       ${error
-        ? 'border-danger bg-red-50 ring-2 ring-danger/20'
+        ? 'border-danger bg-red-50 dark:bg-red-900/20 ring-2 ring-danger/20'
         : focused
           ? 'border-primary ring-2 ring-primary/10'
-          : 'border-slate-200'}`}
+          : 'border-slate-200 dark:border-slate-600'}`}
     >
-      <span className="text-slate-500 text-sm font-medium select-none">R$</span>
+      <span className="text-slate-500 dark:text-slate-400 text-sm font-medium select-none">R$</span>
       <input
         type="text"
         inputMode="decimal"
@@ -54,7 +54,7 @@ export default function CurrencyInput({ value, onChange, error, placeholder = '0
         onBlur={handleBlur}
         onFocus={handleFocus}
         placeholder={placeholder}
-        className="flex-1 outline-none text-sm bg-transparent text-slate-800"
+        className="flex-1 outline-none text-sm bg-transparent text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
       />
     </div>
   )
