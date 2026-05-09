@@ -142,7 +142,7 @@ export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToTo
           <div className="flex items-center gap-3">
             {/* Avatar — toque para ir ao perfil */}
             <button
-              onClick={() => onOpenPerfil?.() ?? handleAvatarClick()}
+              onClick={() => onOpenPerfil ? onOpenPerfil() : handleAvatarClick()}
               className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/40 flex-shrink-0 bg-white/10 active:scale-95 transition-transform"
               title="Meu perfil"
             >

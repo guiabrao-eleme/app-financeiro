@@ -271,6 +271,7 @@ export default function PerfilPage({ onBack }) {
   const { user, signOut, updateUserMeta } = useAuth()
   const { cartoes, loading: cartoesLoading, createCartao, deleteCartao, updateCartao } = useCartoes()
   const { supported: pushSupported, permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications()
+  const [pushError, setPushError] = useState(null)
   const [addingCartao, setAddingCartao] = useState(false)
   const [avatar, setAvatar] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -470,31 +471,44 @@ export default function PerfilPage({ onBack }) {
               </p>
             ) : permission === 'denied' ? (
               <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
-                ⚠️ Notificações bloqueadas. Vá em <strong>Configurações do navegador → Permissões → Notificações</strong> e permita este site.
+                ⚠️ Notificações bloqueadas. Vá em <strong>Configurações → Safari/Chrome → Notificações</strong> e permita este site.
               </p>
             ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {subscribed ? 'Notificações ativas' : 'Receber avisos neste dispositivo'}
-                  </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                    {subscribed
-                      ? 'Você receberá avisos de vencimentos'
-                      : 'Ative para receber avisos de contas'}
-                  </p>
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {subscribed ? 'Notificações ativas' : 'Receber avisos neste dispositivo'}
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                      {pushLoading
+                        ? 'Aguarde...'
+                        : subscribed
+                          ? 'Você receberá avisos de vencimentos'
+                          : 'Ative para receber avisos de contas'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setPushError(null)
+                      const result = subscribed ? await unsubscribe() : await subscribe()
+                      if (result?.error) setPushError(result.error)
+                    }}
+                    disabled={pushLoading}
+                    className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50
+                      ${subscribed ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-600'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform
+                      ${subscribed ? 'translate-x-6' : 'translate-x-0'}`} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={subscribed ? unsubscribe : subscribe}
-                  disabled={pushLoading}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50
-                    ${subscribed ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-600'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform
-                    ${subscribed ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
+                {pushError && (
+                  <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">
+                    ⚠️ {pushError}
+                  </p>
+                )}
+              </>
             )}
           </div>
         </section>
