@@ -49,5 +49,18 @@ export function useCartoes() {
     return { error }
   }
 
-  return { cartoes, loading, createCartao, deleteCartao, refetch: fetchCartoes }
+  const updateCartao = async (id, updates) => {
+    const { data, error } = await supabase
+      .from('cartoes')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    if (!error && data) {
+      setCartoes(prev => prev.map(c => c.id === id ? data : c))
+    }
+    return { data, error }
+  }
+
+  return { cartoes, loading, createCartao, deleteCartao, updateCartao, refetch: fetchCartoes }
 }

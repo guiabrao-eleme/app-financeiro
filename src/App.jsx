@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import RegistrosPage from './pages/RegistrosPage'
 import ResumoAnualPage from './pages/ResumoAnualPage'
 import ObservacoesPage from './pages/ObservacoesPage'
+import PerfilPage from './pages/PerfilPage'
 import BottomNav from './components/layout/BottomNav'
 import NovoRegistroModal from './components/forms/NovoRegistroModal'
 
@@ -41,6 +42,7 @@ function AppRouter() {
           <DashboardPage
             showModal={showModal}
             onCloseModal={() => setShowModal(false)}
+            onOpenPerfil={() => setAppPage('perfil')}
           />
         )
       case 'registros':
@@ -49,11 +51,14 @@ function AppRouter() {
         return <ResumoAnualPage />
       case 'observacoes':
         return <ObservacoesPage />
+      case 'perfil':
+        return <PerfilPage onBack={() => setAppPage('dashboard')} />
       default:
         return (
           <DashboardPage
             showModal={showModal}
             onCloseModal={() => setShowModal(false)}
+            onOpenPerfil={() => setAppPage('perfil')}
           />
         )
     }
@@ -65,10 +70,10 @@ function AppRouter() {
     <div>
       <div key={appPage}>{renderPage()}</div>
 
-      <BottomNav active={navPage} onChange={setAppPage} />
+      {appPage !== 'perfil' && <BottomNav active={navPage} onChange={setAppPage} />}
 
-      {/* Botão flutuante + — oculto na aba Notas (ela tem seu próprio FAB) */}
-      {appPage !== 'observacoes' && (
+      {/* Botão flutuante + — oculto na aba Notas e Perfil */}
+      {appPage !== 'observacoes' && appPage !== 'perfil' && (
         <button
           onClick={() => setShowModal(true)}
           className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg

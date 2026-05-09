@@ -50,6 +50,8 @@ const EMPTY_FORM = {
   repeticao: 'unico',
   meses: 12,
   infinito: false,
+  notificar: false,
+  dias_aviso: 1,
 }
 
 // ─── Formulário de nova categoria ────────────────────────────────────────────
@@ -232,7 +234,7 @@ function MesesStepper({ value, onChange, disabled }) {
             className="w-20 text-center text-2xl font-bold text-slate-800 dark:text-slate-100 outline-none bg-transparent border-b-2 border-primary"
           />
         ) : (
-          <span className="text-2xl font-bold text-slate-800 dark:text-slate-100 cursor-pointer border-b-2 border-transparent hover:border-slate-300 dark:hover:border-slate-500 transition-all">
+          <span className="text-2xl font-bold text-slate-800 dark:text-slate-100 cursor-pointer border-b-2 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 transition-all">
             {value}
           </span>
         )}
@@ -308,6 +310,8 @@ export default function NovoRegistroModal({
         repeticao: 'unico',
         meses: 12,
         infinito: false,
+        notificar: editItem.notificar ?? false,
+        dias_aviso: editItem.dias_aviso ?? 1,
       })
     } else {
       setForm({ ...EMPTY_FORM, data: todayStr() })
@@ -346,6 +350,8 @@ export default function NovoRegistroModal({
               categoria: form.categoria,
               cartao_id: form.cartao_id,
               valor: form.valor,
+              notificar: form.notificar,
+              dias_aviso: form.dias_aviso,
             })
             .eq('grupo_recorrente', editItem.grupo_recorrente)
             .gte('data_vencimento', editItem.data_vencimento)
@@ -368,6 +374,8 @@ export default function NovoRegistroModal({
               categoria: form.categoria,
               cartao_id: form.cartao_id,
               valor: form.valor,
+              notificar: form.notificar,
+              dias_aviso: form.dias_aviso,
             })
             .eq('id', editItem.id)
           if (error) throw error
@@ -400,6 +408,8 @@ export default function NovoRegistroModal({
           valor_total: form.valor,
           parcela_atual: i + 1,
           total_parcelas: n,
+          notificar: form.notificar,
+          dias_aviso: form.dias_aviso,
           ...(grupoId && { grupo_recorrente: grupoId, tipo_repeticao: form.repeticao }),
         }))
 
@@ -415,6 +425,8 @@ export default function NovoRegistroModal({
           valor_total: form.valor,
           parcela_atual: i + 1,
           total_parcelas: n,
+          notificar: form.notificar,
+          dias_aviso: form.dias_aviso,
         }))
 
         let lastError = null
@@ -707,6 +719,49 @@ export default function NovoRegistroModal({
             <CurrencyInput value={form.valor} onChange={val => set('valor', val)} error={errors.valor} />
             {errors.valor && <p className="text-danger text-xs mt-1">{errors.valor}</p>}
           </div>
+
+          {/* ── Aviso de vencimento (apenas saídas) ── */}
+          {form.tipo === 'Saída' && (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Aviso de vencimento
+                </label>
+                <button
+                  type="button"
+                  onClick={() => set('notificar', !form.notificar)}
+                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0
+                    ${form.notificar ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-600'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform
+                    ${form.notificar ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              {form.notificar && (
+                <div className="mt-3 flex items-center gap-3 bg-slate-50 dark:bg-slate-700 rounded-xl px-4 py-3">
+                  <span className="text-sm text-slate-600 dark:text-slate-300 flex-1">Avisar</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button"
+                      onClick={() => set('dias_aviso', Math.max(1, form.dias_aviso - 1))}
+                      className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600">
+                      −
+                    </button>
+                    <span className="w-8 text-center text-sm font-bold text-slate-800 dark:text-slate-100">
+                      {form.dias_aviso}
+                    </span>
+                    <button type="button"
+                      onClick={() => set('dias_aviso', Math.min(30, form.dias_aviso + 1))}
+                      className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600">
+                      +
+                    </button>
+                  </div>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    {form.dias_aviso === 1 ? 'dia antes' : 'dias antes'}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Repetição (apenas criação) ── */}
           {!isEdit && (

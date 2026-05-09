@@ -7,7 +7,7 @@ import SkyToggle from '../ui/SkyToggle'
 
 const COUPLE_PHOTO = '/foto-casal.jpg'
 
-export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToToday, onChangeMonth }) {
+export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToToday, onChangeMonth, onOpenPerfil }) {
   const { user, signOut, updateUserMeta } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const name = user?.user_metadata?.full_name || user?.email || 'Usuário'
@@ -140,11 +140,11 @@ export default function Header({ year, month, onPrevMonth, onNextMonth, onGoToTo
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            {/* Avatar — toque para trocar foto */}
+            {/* Avatar — toque para ir ao perfil */}
             <button
-              onClick={handleAvatarClick}
+              onClick={() => onOpenPerfil?.() ?? handleAvatarClick()}
               className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/40 flex-shrink-0 bg-white/10 active:scale-95 transition-transform"
-              title="Toque para trocar sua foto"
+              title="Meu perfil"
             >
               {/* Spinner enquanto faz upload */}
               {uploading && (

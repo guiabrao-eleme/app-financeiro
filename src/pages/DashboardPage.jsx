@@ -18,7 +18,7 @@ function buildCategoryData(lancamentos) {
   return data
 }
 
-export default function DashboardPage({ showModal }) {
+export default function DashboardPage({ showModal, onOpenPerfil }) {
   const { user } = useAuth()
   const { categories } = useCategories()
   const today = new Date()
@@ -71,7 +71,7 @@ export default function DashboardPage({ showModal }) {
 
   return (
     <div className="min-h-screen bg-background pb-24 page-enter">
-      <Header year={year} month={month} onPrevMonth={prevMonth} onNextMonth={nextMonth} onGoToToday={goToToday} onChangeMonth={changeMonth} />
+      <Header year={year} month={month} onPrevMonth={prevMonth} onNextMonth={nextMonth} onGoToToday={goToToday} onChangeMonth={changeMonth} onOpenPerfil={onOpenPerfil} />
 
       <SummaryCards entradas={entradas} saidas={saidas} loading={loading} />
 
