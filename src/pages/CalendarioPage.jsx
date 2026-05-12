@@ -192,10 +192,31 @@ export default function CalendarioPage() {
           <div className="flex items-center gap-2">
             <SkyToggle checked={isDark} onChange={toggleTheme} />
             {gcal.connected ? (
-              <span className="flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-200 px-2.5 py-1.5 rounded-lg font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                Google Cal
-              </span>
+              <button
+                onClick={async () => {
+                  const result = await gcal.syncAll()
+                  if (result?.error) { addToast('Erro ao sincronizar: ' + result.error, 'error'); return }
+                  addToast(result.synced === 0
+                    ? 'Tudo já estava sincronizado! ✓'
+                    : `${result.synced} lançamento${result.synced > 1 ? 's' : ''} sincronizado${result.synced > 1 ? 's' : ''}! ✓`, 'success')
+                }}
+                disabled={gcal.syncing}
+                className="flex items-center gap-1.5 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 px-2.5 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-60"
+              >
+                {gcal.syncing ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-emerald-300 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    {gcal.syncProgress.total > 0
+                      ? `${gcal.syncProgress.current}/${gcal.syncProgress.total}`
+                      : '...'}
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                    Google Cal
+                  </>
+                )}
+              </button>
             ) : (
               <button
                 onClick={() => setShowExport(true)}
@@ -222,7 +243,42 @@ export default function CalendarioPage() {
       <div className="flex-1 overflow-y-auto pb-36">
 
         {/* ── Banner Google Calendar ── */}
-        {!gcal.connected && (
+        {gcal.connected ? (
+          <button
+            onClick={async () => {
+              const result = await gcal.syncAll()
+              if (result?.error) { addToast('Erro ao sincronizar: ' + result.error, 'error'); return }
+              addToast(result.synced === 0
+                ? 'Tudo já estava sincronizado! ✓'
+                : `${result.synced} lançamento${result.synced > 1 ? 's' : ''} sincronizado${result.synced > 1 ? 's' : ''}! ✓`, 'success')
+            }}
+            disabled={gcal.syncing}
+            className="mx-4 mt-4 w-[calc(100%-2rem)] bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors disabled:opacity-60"
+          >
+            {gcal.syncing ? (
+              <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 flex-shrink-0 text-emerald-500">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M8 16H3v5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                {gcal.syncing
+                  ? gcal.syncProgress.total > 0
+                    ? `Sincronizando ${gcal.syncProgress.current}/${gcal.syncProgress.total}...`
+                    : 'Buscando lançamentos...'
+                  : 'Sincronizar tudo com Google Calendar'}
+              </p>
+              <p className="text-[11px] text-emerald-500 dark:text-emerald-400 mt-0.5">
+                {gcal.syncing ? 'Aguarde...' : 'Toque para enviar todos os lançamentos para sua agenda'}
+              </p>
+            </div>
+          </button>
+        ) : (
           <div className="mx-4 mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl px-4 py-3 flex items-center gap-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 flex-shrink-0 text-blue-500">
               <rect x="3" y="4" width="18" height="18" rx="2" strokeLinecap="round"/>
