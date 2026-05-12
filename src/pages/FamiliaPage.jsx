@@ -213,26 +213,31 @@ function UserPickerSheet({ open, onClose, onSelect, membroEmails }) {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const timerRef              = useRef(null)
+  const inputRef              = useRef(null)
 
-  useEffect(() => { if (open) { setBusca(''); setResults([]) } }, [open])
+  useEffect(() => {
+    if (open) {
+      setBusca('')
+      setResults([])
+      // Foca o input sem causar problema de teclado no iOS (pequeno delay)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }, [open])
 
   const search = useCallback(async (q) => {
     setLoading(true)
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, nome, email')
-      .or(`nome.ilike.%${q}%,email.ilike.%${q}%`)
-      .limit(20)
-    // Filtra quem já é membro
+    const query = supabase.from('profiles').select('id, nome, email')
+    if (q) query.or(`nome.ilike.%${q}%,email.ilike.%${q}%`)
+    const { data } = await query.limit(30)
     setResults((data ?? []).filter(p => !membroEmails.includes(p.email)))
     setLoading(false)
   }, [membroEmails])
 
-  // Carrega todos ao abrir, busca ao digitar (debounce 300ms)
+  // Carrega todos ao abrir, debounce na busca
   useEffect(() => {
     if (!open) return
     clearTimeout(timerRef.current)
-    if (busca.trim().length === 0) { search(''); return }
+    if (!busca.trim()) { search(''); return }
     timerRef.current = setTimeout(() => search(busca.trim()), 300)
     return () => clearTimeout(timerRef.current)
   }, [busca, open, search])
@@ -241,60 +246,83 @@ function UserPickerSheet({ open, onClose, onSelect, membroEmails }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[80vh] flex flex-col">
-        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-3 flex-shrink-0" />
-        <div className="px-4 flex-shrink-0">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-3">Convidar membro</h3>
-          {/* Campo de busca */}
-          <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-600 rounded-2xl px-3 py-2.5 bg-slate-50 dark:bg-slate-700 mb-3">
+      {/* Overlay — fecha ao tocar fora */}
+      <div
+        className="fixed inset-0 bg-black/50 z-50"
+        onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}
+      />
+
+      {/* Sheet */}
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 flex flex-col"
+        style={{ maxHeight: '75dvh' }}
+      >
+        {/* Handle */}
+        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4 flex-shrink-0" />
+
+        {/* Cabeçalho fixo */}
+        <div className="px-4 flex-shrink-0 pb-3">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-3">
+            Selecionar pessoa
+          </h3>
+          <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-600 rounded-2xl px-3 py-3 bg-slate-50 dark:bg-slate-700">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-400 flex-shrink-0">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" strokeLinecap="round"/>
             </svg>
             <input
+              ref={inputRef}
               type="text"
               value={busca}
               onChange={e => setBusca(e.target.value)}
               placeholder="Buscar por nome ou e-mail..."
-              autoFocus
-              className="flex-1 text-sm bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400"
+              className="flex-1 text-sm bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 min-w-0"
             />
-            {busca && (
-              <button onClick={() => setBusca('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">✕</button>
-            )}
+            {busca ? (
+              <button
+                onPointerDown={e => { e.preventDefault(); setBusca('') }}
+                className="w-6 h-6 flex items-center justify-center text-slate-400 flex-shrink-0"
+              >✕</button>
+            ) : null}
           </div>
         </div>
 
-        {/* Lista de resultados */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
+        {/* Lista — scroll independente */}
+        <div
+          className="flex-1 overflow-y-auto px-4 overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch',
+                   paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+        >
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center justify-center py-10">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : results.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-2xl mb-2">🔍</p>
+            <div className="text-center py-10">
+              <p className="text-3xl mb-2">🔍</p>
               <p className="text-sm text-slate-400 dark:text-slate-500">
                 {busca ? 'Nenhum usuário encontrado' : 'Nenhum outro usuário cadastrado'}
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1 pb-2">
               {results.map(u => (
                 <button
                   key={u.id}
                   type="button"
-                  onClick={() => { onSelect(u); onClose() }}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl bg-slate-50 dark:bg-slate-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors text-left"
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={() => onSelect(u)}
+                  className="w-full flex items-center gap-3 px-3 py-4 rounded-2xl active:bg-primary/10 dark:active:bg-primary/20 transition-colors text-left"
                 >
                   <Avatar nome={u.nome} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{u.nome}</p>
                     <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
                   </div>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-primary flex-shrink-0">
-                    <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-primary">
+                      <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
                 </button>
               ))}
             </div>
@@ -650,7 +678,7 @@ export default function FamiliaPage({ onConviteHandled }) {
         open={showPicker}
         onClose={() => setShowPicker(false)}
         onSelect={u => { setUsuarioSelecionado(u); setShowPicker(false) }}
-        membroEmails={membros.map(m => m.email)}
+        membroEmails={[...(membros.map(m => m.email)), user?.email].filter(Boolean)}
       />
     </div>
   )
