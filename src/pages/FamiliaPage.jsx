@@ -207,129 +207,78 @@ function SetupFamilia({ onCreate }) {
   )
 }
 
-// ─── Seletor de usuário para convite ─────────────────────────────────────────
-function UserPickerSheet({ open, onClose, onSelect, membroEmails }) {
+// ─── Lista inline de usuários para convidar ──────────────────────────────────
+function UserPickerInline({ membroEmails, onSelect }) {
   const [busca, setBusca]     = useState('')
   const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const timerRef              = useRef(null)
-  const inputRef              = useRef(null)
-
-  useEffect(() => {
-    if (open) {
-      setBusca('')
-      setResults([])
-      // Foca o input sem causar problema de teclado no iOS (pequeno delay)
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
-  }, [open])
 
   const search = useCallback(async (q) => {
     setLoading(true)
     const query = supabase.from('profiles').select('id, nome, email')
     if (q) query.or(`nome.ilike.%${q}%,email.ilike.%${q}%`)
-    const { data } = await query.limit(30)
+    const { data } = await query.order('nome').limit(50)
     setResults((data ?? []).filter(p => !membroEmails.includes(p.email)))
     setLoading(false)
   }, [membroEmails])
 
-  // Carrega todos ao abrir, debounce na busca
+  // Carrega ao montar
+  useEffect(() => { search('') }, [search])
+
+  // Debounce na busca
   useEffect(() => {
-    if (!open) return
     clearTimeout(timerRef.current)
-    if (!busca.trim()) { search(''); return }
     timerRef.current = setTimeout(() => search(busca.trim()), 300)
     return () => clearTimeout(timerRef.current)
-  }, [busca, open, search])
-
-  if (!open) return null
+  }, [busca, search])
 
   return (
-    <>
-      {/* Overlay — fecha ao tocar fora */}
-      <div
-        className="fixed inset-0 bg-black/50 z-50"
-        onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}
-      />
-
-      {/* Sheet */}
-      <div
-        className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 flex flex-col"
-        style={{ maxHeight: '75dvh' }}
-      >
-        {/* Handle */}
-        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4 flex-shrink-0" />
-
-        {/* Cabeçalho fixo */}
-        <div className="px-4 flex-shrink-0 pb-3">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-3">
-            Selecionar pessoa
-          </h3>
-          <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-600 rounded-2xl px-3 py-3 bg-slate-50 dark:bg-slate-700">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-400 flex-shrink-0">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" strokeLinecap="round"/>
-            </svg>
-            <input
-              ref={inputRef}
-              type="text"
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              placeholder="Buscar por nome ou e-mail..."
-              className="flex-1 text-sm bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 min-w-0"
-            />
-            {busca ? (
-              <button
-                onPointerDown={e => { e.preventDefault(); setBusca('') }}
-                className="w-6 h-6 flex items-center justify-center text-slate-400 flex-shrink-0"
-              >✕</button>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Lista — scroll independente */}
-        <div
-          className="flex-1 overflow-y-auto px-4 overscroll-contain"
-          style={{ WebkitOverflowScrolling: 'touch',
-                   paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
-        >
-          {loading ? (
-            <div className="flex items-center justify-center py-10">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : results.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-3xl mb-2">🔍</p>
-              <p className="text-sm text-slate-400 dark:text-slate-500">
-                {busca ? 'Nenhum usuário encontrado' : 'Nenhum outro usuário cadastrado'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-1 pb-2">
-              {results.map(u => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onPointerDown={e => e.stopPropagation()}
-                  onClick={() => onSelect(u)}
-                  className="w-full flex items-center gap-3 px-3 py-4 rounded-2xl active:bg-primary/10 dark:active:bg-primary/20 transition-colors text-left"
-                >
-                  <Avatar nome={u.nome} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{u.nome}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-primary">
-                      <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+    <div className="space-y-2">
+      {/* Campo de busca */}
+      <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl px-3 py-3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-400 flex-shrink-0">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" strokeLinecap="round"/>
+        </svg>
+        <input
+          type="text"
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou e-mail..."
+          className="flex-1 text-sm bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+        />
+        {busca ? (
+          <button onClick={() => setBusca('')} className="text-slate-400 text-lg leading-none px-1">×</button>
+        ) : null}
       </div>
-    </>
+
+      {/* Lista */}
+      {loading ? (
+        <div className="flex justify-center py-6">
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : results.length === 0 ? (
+        <p className="text-center text-sm text-slate-400 dark:text-slate-500 py-4">
+          {busca ? 'Nenhum usuário encontrado' : 'Nenhum outro usuário cadastrado'}
+        </p>
+      ) : (
+        results.map(u => (
+          <button
+            key={u.id}
+            type="button"
+            onClick={() => onSelect(u)}
+            className="w-full flex items-center gap-3 bg-slate-50 dark:bg-slate-700/60 rounded-2xl px-3 py-3 text-left active:bg-primary/10 dark:active:bg-primary/20"
+          >
+            <Avatar nome={u.nome} size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{u.nome}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
+            </div>
+            <span className="text-xs text-primary font-semibold flex-shrink-0">Convidar</span>
+          </button>
+        ))
+      )}
+    </div>
   )
 }
 
@@ -350,7 +299,6 @@ export default function FamiliaPage({ onConviteHandled }) {
   const [month, setMonth]   = useState(now.getMonth() + 1)
   const [showAdd, setShowAdd]           = useState(false)
   const [showConvite, setShowConvite]   = useState(false)
-  const [showPicker, setShowPicker]     = useState(false)
   const [usuarioSelecionado, setUsuarioSelecionado] = useState(null)
   const [convidando, setConvidando]     = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
@@ -477,44 +425,47 @@ export default function FamiliaPage({ onConviteHandled }) {
 
       <div className="flex-1 overflow-y-auto pb-36">
 
-        {/* ── Formulário de convite (admin) ── */}
+        {/* ── Painel de convite (admin) ── */}
         {showConvite && (
           <div className="mx-4 mt-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 space-y-3">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Convidar membro</p>
-
-            {/* Usuário selecionado ou botão para abrir picker */}
-            {usuarioSelecionado ? (
-              <div className="flex items-center gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-2xl px-3 py-2.5">
-                <Avatar nome={usuarioSelecionado.nome} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{usuarioSelecionado.nome}</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{usuarioSelecionado.email}</p>
-                </div>
-                <button onClick={() => setUsuarioSelecionado(null)} className="text-slate-400 hover:text-red-400 transition-colors text-sm">✕</button>
-              </div>
-            ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Convidar membro</p>
               <button
-                type="button"
-                onClick={() => setShowPicker(true)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-primary hover:text-primary transition-colors text-sm"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 flex-shrink-0">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" strokeLinecap="round"/>
-                </svg>
-                Selecionar pessoa cadastrada no app...
-              </button>
-            )}
-
-            <div className="flex gap-2">
-              <button onClick={() => { setShowConvite(false); setUsuarioSelecionado(null) }}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 text-sm font-medium">
-                Cancelar
-              </button>
-              <button onClick={handleConvite} disabled={!usuarioSelecionado || convidando}
-                className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold disabled:opacity-50">
-                {convidando ? 'Enviando...' : 'Convidar'}
-              </button>
+                onClick={() => { setShowConvite(false); setUsuarioSelecionado(null) }}
+                className="text-slate-400 dark:text-slate-500 text-lg leading-none px-1"
+              >×</button>
             </div>
+
+            {/* Usuário já selecionado → mostra card + botão confirmar */}
+            {usuarioSelecionado ? (
+              <>
+                <div className="flex items-center gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-2xl px-3 py-3">
+                  <Avatar nome={usuarioSelecionado.nome} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{usuarioSelecionado.nome}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{usuarioSelecionado.email}</p>
+                  </div>
+                  <button onClick={() => setUsuarioSelecionado(null)}
+                    className="text-slate-400 hover:text-red-400 text-lg leading-none px-1">×</button>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setUsuarioSelecionado(null)}
+                    className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                    Voltar
+                  </button>
+                  <button onClick={handleConvite} disabled={convidando}
+                    className="flex-1 py-3 bg-primary text-white rounded-2xl text-sm font-semibold disabled:opacity-50">
+                    {convidando ? 'Enviando...' : '✓ Confirmar convite'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* Lista inline de usuários */
+              <UserPickerInline
+                membroEmails={[...(membros.map(m => m.email)), user?.email].filter(Boolean)}
+                onSelect={u => setUsuarioSelecionado(u)}
+              />
+            )}
           </div>
         )}
 
@@ -674,12 +625,6 @@ export default function FamiliaPage({ onConviteHandled }) {
         onSave={addLancamento}
       />
 
-      <UserPickerSheet
-        open={showPicker}
-        onClose={() => setShowPicker(false)}
-        onSelect={u => { setUsuarioSelecionado(u); setShowPicker(false) }}
-        membroEmails={[...(membros.map(m => m.email)), user?.email].filter(Boolean)}
-      />
     </div>
   )
 }
