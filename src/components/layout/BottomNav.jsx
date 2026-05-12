@@ -4,7 +4,7 @@ import { motion } from 'motion/react'
 const tabs = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Início',
     icon: (active) => (
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={active ? 0 : 1.8} className="w-5 h-5">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -22,6 +22,23 @@ const tabs = [
         <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" strokeLinecap="round" />
         <rect x="9" y="3" width="6" height="4" rx="1" strokeLinecap="round" />
         <path d="M9 12h6M9 16h4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    id: 'calendario',
+    label: 'Agenda',
+    icon: (active) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} className="w-5 h-5">
+        <rect x="3" y="4" width="18" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round" strokeLinejoin="round"/>
+        {active && (
+          <>
+            <circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/>
+            <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/>
+            <circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/>
+          </>
+        )}
       </svg>
     ),
   },
@@ -104,7 +121,7 @@ export default function BottomNav({ active, onChange }) {
               key={tab.id}
               ref={el => { tabRefs.current[index] = el }}
               onClick={() => onChange(tab.id)}
-              className={`relative z-10 flex flex-col items-center gap-0.5 py-2.5 px-4 rounded-2xl transition-colors duration-200
+              className={`relative z-10 flex flex-col items-center gap-0.5 py-2.5 px-3 rounded-2xl transition-colors duration-200
                 ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}
             >
               {tab.icon(isActive)}
