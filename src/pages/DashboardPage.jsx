@@ -70,7 +70,7 @@ export default function DashboardPage({ showModal, onOpenPerfil }) {
   const categoryData = buildCategoryData(lancamentos)
 
   return (
-    <div className="min-h-screen bg-background pb-24 page-enter">
+    <div className="min-h-screen bg-background pb-36 page-enter">
       <Header year={year} month={month} onPrevMonth={prevMonth} onNextMonth={nextMonth} onGoToToday={goToToday} onChangeMonth={changeMonth} onOpenPerfil={onOpenPerfil} />
 
       <SummaryCards entradas={entradas} saidas={saidas} loading={loading} />

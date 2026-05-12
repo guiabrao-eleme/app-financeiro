@@ -381,7 +381,7 @@ export default function ResumoAnualPage() {
   const hasAnyData = monthlyData.some(m => m.entradas > 0 || m.saidas > 0)
 
   return (
-    <div className="min-h-screen bg-background pb-24 page-enter">
+    <div className="min-h-screen bg-background pb-36 page-enter">
       {/* Header */}
       <div className="bg-primary text-white px-4 pt-safe pb-5 shadow-md">
         <div className="flex items-center justify-between mb-3">

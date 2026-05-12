@@ -183,5 +183,5 @@ export function useGoogleCalendar() {
     } catch { /* não bloqueia */ }
   }, [])
 
-  return { connected, loading, connect, disconnect, createEvents, updateEvent, deleteEvent }
+  return { connected, loading, configured: !!CLIENT_ID, connect, disconnect, createEvents, updateEvent, deleteEvent }
 }

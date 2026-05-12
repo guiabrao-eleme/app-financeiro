@@ -83,23 +83,30 @@ export function useFamilia() {
 
   // ── Criar família ─────────────────────────────────────────────────────────
   const createFamilia = useCallback(async (nome) => {
-    const { data: fam, error: e1 } = await supabase
+    // Gera o ID client-side para evitar problema de RLS no .select() pós-insert:
+    // a política SELECT usa get_my_familia_id() que consulta familia_membros,
+    // mas esse registro ainda não existe no momento do insert em familias.
+    const familiaId = crypto.randomUUID()
+
+    const { error: e1 } = await supabase
       .from('familias')
-      .insert({ nome: nome.trim(), criado_por: user.id })
-      .select()
-      .single()
+      .insert({ id: familiaId, nome: nome.trim(), criado_por: user.id })
     if (e1) return { error: e1.message }
 
     const { error: e2 } = await supabase
       .from('familia_membros')
       .insert({
-        familia_id: fam.id,
+        familia_id: familiaId,
         user_id:    user.id,
         email:      user.email,
         nome:       user.user_metadata?.full_name || user.email.split('@')[0],
         role:       'admin',
       })
-    if (e2) return { error: e2.message }
+    if (e2) {
+      // Reverte a familia se o membro falhou
+      await supabase.from('familias').delete().eq('id', familiaId)
+      return { error: e2.message }
+    }
 
     await load()
     return { error: null }

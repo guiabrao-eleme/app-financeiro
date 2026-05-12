@@ -532,7 +532,20 @@ export default function PerfilPage({ onBack }) {
           </div>
 
           <div className="px-4 py-4 space-y-3">
-            {gcal.connected ? (
+            {/* Não configurado */}
+            {!gcal.configured ? (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Para ativar a sincronização com o Google Calendar, o app precisa ser configurado com uma chave do Google Cloud Console.
+                </p>
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2.5 space-y-1">
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">⚙️ Configuração necessária</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500 leading-relaxed">
+                    Adicione <code className="bg-amber-100 dark:bg-amber-900/40 px-1 rounded font-mono">VITE_GOOGLE_CLIENT_ID</code> nas variáveis de ambiente do projeto (arquivo <code className="bg-amber-100 dark:bg-amber-900/40 px-1 rounded font-mono">.env</code> e no Vercel).
+                  </p>
+                </div>
+              </div>
+            ) : gcal.connected ? (
               <>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   Lançamentos criados, editados ou excluídos serão automaticamente sincronizados com o seu Google Calendar.
