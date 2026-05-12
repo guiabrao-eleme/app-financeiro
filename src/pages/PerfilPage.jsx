@@ -275,6 +275,7 @@ export default function PerfilPage({ onBack }) {
   const gcal = useGoogleCalendar()
   const [pushError, setPushError] = useState(null)
   const [gcalError, setGcalError] = useState(null)
+  const [syncMsg, setSyncMsg]     = useState('')
   const [addingCartao, setAddingCartao] = useState(false)
   const [avatar, setAvatar] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -550,9 +551,56 @@ export default function PerfilPage({ onBack }) {
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   Lançamentos criados, editados ou excluídos serão automaticamente sincronizados com o seu Google Calendar.
                 </p>
+
+                {/* Sincronizar tudo */}
                 <button
                   type="button"
-                  onClick={() => { setGcalError(null); gcal.disconnect() }}
+                  disabled={gcal.syncing}
+                  onClick={async () => {
+                    setSyncMsg('')
+                    setGcalError(null)
+                    const result = await gcal.syncAll()
+                    if (result?.error) { setGcalError(result.error); return }
+                    setSyncMsg(result.synced === 0
+                      ? 'Tudo já estava sincronizado! ✓'
+                      : `${result.synced} lançamento${result.synced > 1 ? 's' : ''} enviado${result.synced > 1 ? 's' : ''} para o Google Calendar! ✓`)
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 text-primary dark:text-blue-300 text-sm font-semibold hover:bg-primary/15 transition-colors disabled:opacity-60"
+                >
+                  {gcal.syncing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                      {gcal.syncProgress.total > 0
+                        ? `Sincronizando ${gcal.syncProgress.current}/${gcal.syncProgress.total}...`
+                        : 'Buscando lançamentos...'}
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 flex-shrink-0">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M8 16H3v5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Sincronizar tudo com Google Calendar
+                    </>
+                  )}
+                </button>
+
+                {syncMsg && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl px-3 py-2 text-center font-medium">
+                    {syncMsg}
+                  </p>
+                )}
+                {gcalError && (
+                  <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">
+                    ⚠️ {gcalError}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => { setGcalError(null); setSyncMsg(''); gcal.disconnect() }}
                   className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   Desconectar do Google Calendar

@@ -86,6 +86,8 @@ export function useGoogleCalendar() {
   const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
   const [connected, setConnected] = useState(() => !!readToken())
   const [loading, setLoading]     = useState(false)
+  const [syncing, setSyncing]     = useState(false)
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 })
 
   // Valida token no mount
   useEffect(() => { setConnected(!!readToken()) }, [])
@@ -170,6 +172,47 @@ export function useGoogleCalendar() {
     } catch { /* não bloqueia */ }
   }, [getToken, createEvents])
 
+  /** Sincroniza TODOS os lançamentos sem google_event_id para o Google Calendar. */
+  const syncAll = useCallback(async () => {
+    setSyncing(true)
+    setSyncProgress({ current: 0, total: 0 })
+
+    const token = await getToken(true)
+    if (!token) { setSyncing(false); return { error: 'Autorização necessária.' } }
+
+    // Busca todos os lançamentos que ainda não têm google_event_id
+    const { data: lancamentos, error } = await supabase
+      .from('lancamentos')
+      .select('*')
+      .is('google_event_id', null)
+      .order('data_vencimento', { ascending: true })
+
+    if (error) { setSyncing(false); return { error: error.message } }
+    if (!lancamentos?.length) { setSyncing(false); return { synced: 0 } }
+
+    setSyncProgress({ current: 0, total: lancamentos.length })
+    let synced = 0
+
+    for (const l of lancamentos) {
+      try {
+        const res = await fetch(EVENTS_URL, {
+          method:  'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body:    JSON.stringify(buildEvent(l)),
+        })
+        if (res.ok) {
+          const { id } = await res.json()
+          await supabase.from('lancamentos').update({ google_event_id: id }).eq('id', l.id)
+          synced++
+        }
+      } catch { /* continua mesmo se um falhar */ }
+      setSyncProgress(p => ({ ...p, current: p.current + 1 }))
+    }
+
+    setSyncing(false)
+    return { synced, error: null }
+  }, [getToken])
+
   /** Deleta evento pelo google_event_id (não precisa de prompt se token expirou). */
   const deleteEvent = useCallback(async (googleEventId) => {
     if (!googleEventId) return
@@ -183,5 +226,5 @@ export function useGoogleCalendar() {
     } catch { /* não bloqueia */ }
   }, [])
 
-  return { connected, loading, configured: !!CLIENT_ID, connect, disconnect, createEvents, updateEvent, deleteEvent }
+  return { connected, loading, syncing, syncProgress, configured: !!CLIENT_ID, connect, disconnect, createEvents, updateEvent, deleteEvent, syncAll }
 }
