@@ -12,6 +12,7 @@ import SkyToggle from '../components/ui/SkyToggle'
 import { downloadCSV, formatCSVCurrency } from '../utils/csv'
 import { useCategories, getCatMeta } from '../hooks/useCategories'
 import { useCartoes, getCorMeta } from '../hooks/useCartoes'
+import { useGoogleCalendar } from '../hooks/useGoogleCalendar'
 
 const SORT_OPTIONS = [
   { id: 'data_desc',  label: '↓ Mais novo' },
@@ -152,6 +153,7 @@ export default function RegistrosPage({ showModal }) {
   const { addToast, ToastContainer } = useToast()
   const { categories } = useCategories()
   const { cartoes } = useCartoes()
+  const gcal = useGoogleCalendar()
 
   // Chips dinâmicos: fixos + categorias do usuário
   const chips = [
@@ -306,6 +308,10 @@ export default function RegistrosPage({ showModal }) {
     const timer = setTimeout(async () => {
       delete pendingDeletes.current[item.id]
       await supabase.from('lancamentos').delete().eq('id', item.id)
+      // Deleta do Google Calendar após confirmar a exclusão
+      if (gcal.connected && item.google_event_id) {
+        gcal.deleteEvent(item.google_event_id).catch(console.warn)
+      }
     }, 5000)
 
     pendingDeletes.current[item.id] = { item, timer }
@@ -341,6 +347,12 @@ export default function RegistrosPage({ showModal }) {
     const timer = setTimeout(async () => {
       ids.forEach(id => delete pendingDeletes.current[id])
       await supabase.from('lancamentos').delete().in('id', ids)
+      // Deleta eventos do Google Calendar em background
+      if (gcal.connected) {
+        items.forEach(i => {
+          if (i.google_event_id) gcal.deleteEvent(i.google_event_id).catch(console.warn)
+        })
+      }
     }, 5000)
 
     ids.forEach(id => {

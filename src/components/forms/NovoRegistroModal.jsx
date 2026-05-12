@@ -6,6 +6,7 @@ import { useToast } from '../ui/Toast'
 import CurrencyInput from './CurrencyInput'
 import { useCategories } from '../../hooks/useCategories'
 import { useCartoes, COR_MAP, getCorMeta } from '../../hooks/useCartoes'
+import { useGoogleCalendar } from '../../hooks/useGoogleCalendar'
 
 const EMOJIS_SUGERIDOS = [
   '🏠','🚗','🎓','🛍️','💰','📚','💼','🍀','🍕','✈️',
@@ -262,6 +263,7 @@ export default function NovoRegistroModal({
   const { addToast, ToastContainer } = useToast()
   const { categories, loading: catsLoading, deleteCategory, createCategory } = useCategories()
   const { cartoes, loading: cartoesLoading, createCartao, deleteCartao } = useCartoes()
+  const gcal = useGoogleCalendar()
   const isEdit = !!editItem
 
   const [form, setForm] = useState(EMPTY_FORM)
@@ -379,6 +381,21 @@ export default function NovoRegistroModal({
             })
             .eq('id', editItem.id)
           if (error) throw error
+
+          // Sincroniza edição com Google Calendar em background
+          if (gcal.connected) {
+            gcal.updateEvent({
+              ...editItem,
+              data_vencimento: form.data,
+              descricao: form.descricao.trim(),
+              tipo: form.tipo,
+              categoria: form.categoria,
+              valor: form.valor,
+              notificar: form.notificar,
+              dias_aviso: form.dias_aviso,
+            }).catch(console.warn)
+          }
+
           addToast('Registro atualizado!', 'success')
         }
       } else {
@@ -430,14 +447,20 @@ export default function NovoRegistroModal({
         }))
 
         let lastError = null
+        let savedRecords = null
         for (const tentativa of [recsCompletos, recsSemGrupo]) {
-          const { error } = await supabase.from('lancamentos').insert(tentativa)
-          if (!error) { lastError = null; break }
+          const { data, error } = await supabase.from('lancamentos').insert(tentativa).select()
+          if (!error) { lastError = null; savedRecords = data; break }
           lastError = error
           if (!error.message?.includes('does not exist') && !error.message?.includes('column')) break
         }
 
         if (lastError) throw lastError
+
+        // Sincroniza com Google Calendar em background (não bloqueia o app)
+        if (gcal.connected && savedRecords?.length) {
+          gcal.createEvents(savedRecords).catch(console.warn)
+        }
 
         const msg = isParcelado
           ? `${n} parcelas de ${formatCurrency(valorUnitario)} criadas!`
