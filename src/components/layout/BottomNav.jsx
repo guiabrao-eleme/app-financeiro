@@ -26,6 +26,18 @@ const tabs = [
     ),
   },
   {
+    id: 'familia',
+    label: 'Família',
+    icon: (active) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} className="w-5 h-5">
+        <circle cx="9" cy="7" r="3" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M21 21v-2a4 4 0 0 0-3-3.85" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
     id: 'calendario',
     label: 'Agenda',
     icon: (active) => (
@@ -70,24 +82,20 @@ const tabs = [
   },
 ]
 
-export default function BottomNav({ active, onChange }) {
-  const tabRefs = useRef([])
+// badges: objeto { tabId: true/false } para mostrar ponto vermelho
+export default function BottomNav({ active, onChange, badges = {} }) {
+  const tabRefs      = useRef([])
   const containerRef = useRef(null)
   const [indicatorBounds, setIndicatorBounds] = useState({ left: 0, width: 0 })
 
   useEffect(() => {
     const activeIndex = tabs.findIndex(t => t.id === active)
-    const el = tabRefs.current[activeIndex]
+    const el        = tabRefs.current[activeIndex]
     const container = containerRef.current
     if (!el || !container) return
-
-    const elRect = el.getBoundingClientRect()
+    const elRect        = el.getBoundingClientRect()
     const containerRect = container.getBoundingClientRect()
-
-    setIndicatorBounds({
-      left: elRect.left - containerRect.left,
-      width: elRect.width,
-    })
+    setIndicatorBounds({ left: elRect.left - containerRect.left, width: elRect.width })
   }, [active])
 
   return (
@@ -95,37 +103,37 @@ export default function BottomNav({ active, onChange }) {
       className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 z-40"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div ref={containerRef} className="relative flex items-center justify-around px-1 py-1">
+      <div ref={containerRef} className="relative flex items-center justify-around px-0.5 py-1">
 
         {/* Indicador deslizante */}
         {indicatorBounds.width > 0 && (
           <motion.div
             className="absolute top-1 bottom-1 bg-primary rounded-2xl z-0"
             initial={false}
-            animate={{
-              left: indicatorBounds.left,
-              width: indicatorBounds.width,
-            }}
-            transition={{
-              type: 'spring',
-              stiffness: 400,
-              damping: 32,
-            }}
+            animate={{ left: indicatorBounds.left, width: indicatorBounds.width }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
           />
         )}
 
         {tabs.map((tab, index) => {
           const isActive = active === tab.id
+          const hasBadge = badges[tab.id]
           return (
             <button
               key={tab.id}
               ref={el => { tabRefs.current[index] = el }}
               onClick={() => onChange(tab.id)}
-              className={`relative z-10 flex flex-col items-center gap-0.5 py-2.5 px-3 rounded-2xl transition-colors duration-200
+              className={`relative z-10 flex flex-col items-center gap-0.5 py-2.5 px-2 rounded-2xl transition-colors duration-200
                 ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}
             >
-              {tab.icon(isActive)}
-              <span className={`text-[9px] font-semibold ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+              {/* Ícone + badge */}
+              <div className="relative">
+                {tab.icon(isActive)}
+                {hasBadge && !isActive && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-800" />
+                )}
+              </div>
+              <span className={`text-[8px] font-semibold leading-none ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                 {tab.label}
               </span>
             </button>

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { supabase } from './lib/supabase'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
@@ -8,15 +9,28 @@ import RegistrosPage from './pages/RegistrosPage'
 import ResumoAnualPage from './pages/ResumoAnualPage'
 import ObservacoesPage from './pages/ObservacoesPage'
 import CalendarioPage from './pages/CalendarioPage'
+import FamiliaPage from './pages/FamiliaPage'
 import PerfilPage from './pages/PerfilPage'
 import BottomNav from './components/layout/BottomNav'
 import NovoRegistroModal from './components/forms/NovoRegistroModal'
 
 function AppRouter() {
   const { user, loading } = useAuth()
-  const [authPage, setAuthPage] = useState('login')
-  const [appPage, setAppPage] = useState('dashboard')
-  const [showModal, setShowModal] = useState(false)
+  const [authPage, setAuthPage]     = useState('login')
+  const [appPage, setAppPage]       = useState('dashboard')
+  const [showModal, setShowModal]   = useState(false)
+  const [familiaNotif, setFamiliaNotif] = useState(false)
+
+  // Verifica convite pendente para mostrar badge na aba Família
+  useEffect(() => {
+    if (!user) return
+    supabase
+      .from('familia_convites')
+      .select('id', { count: 'exact', head: true })
+      .eq('email', user.email)
+      .eq('status', 'pendente')
+      .then(({ count }) => setFamiliaNotif((count ?? 0) > 0))
+  }, [user])
 
   if (loading) {
     return (
@@ -52,6 +66,12 @@ function AppRouter() {
         return <ResumoAnualPage />
       case 'calendario':
         return <CalendarioPage />
+      case 'familia':
+        return (
+          <FamiliaPage
+            onConviteHandled={() => setFamiliaNotif(false)}
+          />
+        )
       case 'observacoes':
         return <ObservacoesPage />
       case 'perfil':
@@ -67,13 +87,19 @@ function AppRouter() {
     }
   }
 
-  const navPage = ['dashboard', 'registros', 'calendario', 'anual', 'observacoes'].includes(appPage) ? appPage : 'dashboard'
+  const navPage = ['dashboard', 'registros', 'familia', 'calendario', 'anual', 'observacoes'].includes(appPage) ? appPage : 'dashboard'
 
   return (
     <div>
       <div key={appPage}>{renderPage()}</div>
 
-      {appPage !== 'perfil' && <BottomNav active={navPage} onChange={setAppPage} />}
+      {appPage !== 'perfil' && (
+        <BottomNav
+          active={navPage}
+          onChange={setAppPage}
+          badges={{ familia: familiaNotif }}
+        />
+      )}
 
       {/* Botão flutuante + — oculto na aba Notas e Perfil */}
       {appPage !== 'observacoes' && appPage !== 'perfil' && (
