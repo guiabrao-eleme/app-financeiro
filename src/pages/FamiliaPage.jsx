@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useFamilia } from '../hooks/useFamilia'
 import { useTheme } from '../contexts/ThemeContext'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../utils/format'
 import { useToast } from '../components/ui/Toast'
 import SkyToggle from '../components/ui/SkyToggle'
@@ -205,9 +207,108 @@ function SetupFamilia({ onCreate }) {
   )
 }
 
+// ─── Seletor de usuário para convite ─────────────────────────────────────────
+function UserPickerSheet({ open, onClose, onSelect, membroEmails }) {
+  const [busca, setBusca]     = useState('')
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const timerRef              = useRef(null)
+
+  useEffect(() => { if (open) { setBusca(''); setResults([]) } }, [open])
+
+  const search = useCallback(async (q) => {
+    setLoading(true)
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, nome, email')
+      .or(`nome.ilike.%${q}%,email.ilike.%${q}%`)
+      .limit(20)
+    // Filtra quem já é membro
+    setResults((data ?? []).filter(p => !membroEmails.includes(p.email)))
+    setLoading(false)
+  }, [membroEmails])
+
+  // Carrega todos ao abrir, busca ao digitar (debounce 300ms)
+  useEffect(() => {
+    if (!open) return
+    clearTimeout(timerRef.current)
+    if (busca.trim().length === 0) { search(''); return }
+    timerRef.current = setTimeout(() => search(busca.trim()), 300)
+    return () => clearTimeout(timerRef.current)
+  }, [busca, open, search])
+
+  if (!open) return null
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[80vh] flex flex-col">
+        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-3 flex-shrink-0" />
+        <div className="px-4 flex-shrink-0">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-3">Convidar membro</h3>
+          {/* Campo de busca */}
+          <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-600 rounded-2xl px-3 py-2.5 bg-slate-50 dark:bg-slate-700 mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-400 flex-shrink-0">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="text"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar por nome ou e-mail..."
+              autoFocus
+              className="flex-1 text-sm bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400"
+            />
+            {busca && (
+              <button onClick={() => setBusca('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">✕</button>
+            )}
+          </div>
+        </div>
+
+        {/* Lista de resultados */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : results.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-2xl mb-2">🔍</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">
+                {busca ? 'Nenhum usuário encontrado' : 'Nenhum outro usuário cadastrado'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {results.map(u => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => { onSelect(u); onClose() }}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl bg-slate-50 dark:bg-slate-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors text-left"
+                >
+                  <Avatar nome={u.nome} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{u.nome}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
+                  </div>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-primary flex-shrink-0">
+                    <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function FamiliaPage({ onConviteHandled }) {
   const { isDark, toggleTheme } = useTheme()
+  const { user } = useAuth()
   const { addToast, ToastContainer } = useToast()
   const {
     familia, membros, convitePendente, lancamentos, loading,
@@ -219,10 +320,11 @@ export default function FamiliaPage({ onConviteHandled }) {
   const now   = new Date()
   const [year, setYear]     = useState(now.getFullYear())
   const [month, setMonth]   = useState(now.getMonth() + 1)
-  const [showAdd, setShowAdd]       = useState(false)
-  const [showConvite, setShowConvite] = useState(false)
-  const [emailConvite, setEmailConvite] = useState('')
-  const [convidando, setConvidando] = useState(false)
+  const [showAdd, setShowAdd]           = useState(false)
+  const [showConvite, setShowConvite]   = useState(false)
+  const [showPicker, setShowPicker]     = useState(false)
+  const [usuarioSelecionado, setUsuarioSelecionado] = useState(null)
+  const [convidando, setConvidando]     = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [showMembros, setShowMembros] = useState(false)
 
@@ -255,13 +357,13 @@ export default function FamiliaPage({ onConviteHandled }) {
   }
 
   const handleConvite = async () => {
-    if (!emailConvite.trim()) return
+    if (!usuarioSelecionado) return
     setConvidando(true)
-    const result = await convidarMembro(emailConvite)
+    const result = await convidarMembro(usuarioSelecionado.email)
     setConvidando(false)
     if (result?.error) { addToast(result.error, 'error'); return }
-    addToast(`Convite enviado para ${emailConvite}! Quando ele(a) abrir o app verá o convite.`, 'success')
-    setEmailConvite('')
+    addToast(`Convite enviado para ${usuarioSelecionado.nome}! Quando ele(a) abrir o app verá o convite.`, 'success')
+    setUsuarioSelecionado(null)
     setShowConvite(false)
   }
 
@@ -351,20 +453,40 @@ export default function FamiliaPage({ onConviteHandled }) {
         {showConvite && (
           <div className="mx-4 mt-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 space-y-3">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Convidar membro</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Digite o e-mail que a pessoa usa para entrar no app. Quando ela abrir a aba Família, verá o convite para aceitar.
-            </p>
+
+            {/* Usuário selecionado ou botão para abrir picker */}
+            {usuarioSelecionado ? (
+              <div className="flex items-center gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-2xl px-3 py-2.5">
+                <Avatar nome={usuarioSelecionado.nome} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{usuarioSelecionado.nome}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{usuarioSelecionado.email}</p>
+                </div>
+                <button onClick={() => setUsuarioSelecionado(null)} className="text-slate-400 hover:text-red-400 transition-colors text-sm">✕</button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowPicker(true)}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-primary hover:text-primary transition-colors text-sm"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 flex-shrink-0">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" strokeLinecap="round"/>
+                </svg>
+                Selecionar pessoa cadastrada no app...
+              </button>
+            )}
+
             <div className="flex gap-2">
-              <input type="email" value={emailConvite} onChange={e => setEmailConvite(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleConvite()}
-                placeholder="email@exemplo.com"
-                className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 text-sm outline-none focus:border-primary" />
-              <button onClick={handleConvite} disabled={!emailConvite.trim() || convidando}
-                className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold disabled:opacity-50">
-                {convidando ? '...' : 'Enviar'}
+              <button onClick={() => { setShowConvite(false); setUsuarioSelecionado(null) }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                Cancelar
+              </button>
+              <button onClick={handleConvite} disabled={!usuarioSelecionado || convidando}
+                className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold disabled:opacity-50">
+                {convidando ? 'Enviando...' : 'Convidar'}
               </button>
             </div>
-            <button onClick={() => setShowConvite(false)} className="text-xs text-slate-400 dark:text-slate-500">Fechar</button>
           </div>
         )}
 
@@ -522,6 +644,13 @@ export default function FamiliaPage({ onConviteHandled }) {
         open={showAdd}
         onClose={() => setShowAdd(false)}
         onSave={addLancamento}
+      />
+
+      <UserPickerSheet
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        onSelect={u => { setUsuarioSelecionado(u); setShowPicker(false) }}
+        membroEmails={membros.map(m => m.email)}
       />
     </div>
   )
