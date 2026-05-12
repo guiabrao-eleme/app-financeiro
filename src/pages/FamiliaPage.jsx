@@ -262,12 +262,16 @@ function UserPickerInline({ membroEmails, onSelect }) {
           {busca ? 'Nenhum usuário encontrado' : 'Nenhum outro usuário cadastrado'}
         </p>
       ) : (
-        results.map(u => (
+        <div
+          className="overflow-y-auto rounded-2xl border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700"
+          style={{ maxHeight: '116px' }}
+        >
+        {results.map(u => (
           <button
             key={u.id}
             type="button"
             onClick={() => onSelect(u)}
-            className="w-full flex items-center gap-3 bg-slate-50 dark:bg-slate-700/60 rounded-2xl px-3 py-3 text-left active:bg-primary/10 dark:active:bg-primary/20"
+            className="w-full flex items-center gap-3 bg-white dark:bg-slate-800 px-3 py-3 text-left active:bg-primary/10 dark:active:bg-primary/20"
           >
             <Avatar nome={u.nome} size="sm" />
             <div className="flex-1 min-w-0">
@@ -276,7 +280,8 @@ function UserPickerInline({ membroEmails, onSelect }) {
             </div>
             <span className="text-xs text-primary font-semibold flex-shrink-0">Convidar</span>
           </button>
-        ))
+        ))}
+        </div>
       )}
     </div>
   )
