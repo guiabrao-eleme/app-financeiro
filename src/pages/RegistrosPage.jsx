@@ -91,8 +91,11 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
           <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{item.descricao}</p>
           {/* Badge família */}
           {isFamilia && (
-            <span className="flex-shrink-0 text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded-full">
+            <span className="flex-shrink-0 text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
               👨‍👩‍👧‍👦 {item._familia_nome}
+              {typeof item._fatia_pct === 'number' && item._fatia_pct < 100 && (
+                <span className="opacity-70">· {item._fatia_pct.toFixed(0)}%</span>
+              )}
             </span>
           )}
           {/* Badge recorrente */}

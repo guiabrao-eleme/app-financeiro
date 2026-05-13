@@ -446,8 +446,11 @@ export default function CalendarioPage() {
                             {item.descricao}
                           </p>
                           {isFamilia && (
-                            <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0">
+                            <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 inline-flex items-center gap-1">
                               👨‍👩‍👧‍👦 {item._familia_nome}
+                              {typeof item._fatia_pct === 'number' && item._fatia_pct < 100 && (
+                                <span className="opacity-70">· {item._fatia_pct.toFixed(0)}%</span>
+                              )}
                             </span>
                           )}
                           {item.tipo_repeticao === 'recorrente' && (

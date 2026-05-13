@@ -1,5 +1,6 @@
 // Utilitário para buscar lançamentos das famílias do usuário e mesclá-los com os pessoais
 import { supabase } from '../lib/supabase'
+import { minhaFatia } from './divisao'
 
 /**
  * Busca resumos (a receber / a pagar do mês) para uma lista de famílias.
@@ -71,10 +72,18 @@ export async function fetchFamiliaLancamentos(userId, fields = '*', start = null
 
   const { data } = await query
 
-  // 4. Marca cada item com origem e nome da família
-  return (data ?? []).map(l => ({
-    ...l,
-    _origem:       'familia',
-    _familia_nome: familiaMap[l.familia_id] ?? 'Família',
-  }))
+  // 4. Marca cada item com origem, nome da família e fatia do usuário
+  return (data ?? []).map(l => {
+    const fatia = minhaFatia(l, userId)
+    return {
+      ...l,
+      _origem:        'familia',
+      _familia_nome:  familiaMap[l.familia_id] ?? 'Família',
+      _valor_total:   Number(l.valor ?? 0),
+      _fatia_pct:     fatia.percentual,
+      // Substitui o "valor" pela fatia do usuário, para que os totais agregados
+      // do Dashboard/Calendário/Resumo Anual reflitam a parte real dele.
+      valor:          fatia.valor,
+    }
+  })
 }

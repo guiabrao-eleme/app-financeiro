@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../utils/format'
 import { fetchResumosFamilias } from '../utils/familiaLancamentos'
+import { divisaoIgualitaria, divisaoComValor, divisaoValida, calcularSaldos } from '../utils/divisao'
 import { useToast } from '../components/ui/Toast'
 import SkyToggle from '../components/ui/SkyToggle'
 import MonthYearPicker from '../components/ui/MonthYearPicker'
@@ -503,6 +504,222 @@ function FamiliaListScreen({
   )
 }
 
+// ─── Sheet: editor de divisão de um lançamento ────────────────────────────────
+function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
+  const [modo, setModo]   = useState('percentual') // 'percentual' | 'valor'
+  const [linhas, setLinhas] = useState([])
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open || !lancamento) return
+    const inicial = (lancamento.divisao?.length ? lancamento.divisao : divisaoIgualitaria(membros))
+    setLinhas(inicial.map(d => ({
+      user_id: d.user_id,
+      nome:    d.nome,
+      percentual: Number(d.percentual ?? 0),
+    })))
+    setModo('percentual')
+  }, [open, lancamento, membros])
+
+  if (!open || !lancamento) return null
+
+  const valorTotal = Number(lancamento.valor ?? 0)
+
+  const updatePercentual = (idx, novo) => {
+    const v = Math.max(0, Math.min(100, Number(novo) || 0))
+    setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, percentual: v } : l))
+  }
+
+  const updateValor = (idx, novo) => {
+    if (valorTotal <= 0) return
+    const v = Math.max(0, Math.min(valorTotal, Number(novo) || 0))
+    const pct = +(v / valorTotal * 100).toFixed(2)
+    setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, percentual: pct } : l))
+  }
+
+  const dividirIgualmente = () => {
+    setLinhas(divisaoIgualitaria(membros).map(d => ({
+      user_id: d.user_id, nome: d.nome, percentual: d.percentual,
+    })))
+  }
+
+  const somaPct = linhas.reduce((s, l) => s + l.percentual, 0)
+  const podeSubmeter = Math.abs(somaPct - 100) < 0.05
+
+  const handleSave = async () => {
+    if (!podeSubmeter) return
+    setSaving(true)
+    const r = await onSave(linhas)
+    setSaving(false)
+    if (!r?.error) onClose()
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[90dvh] overflow-y-auto">
+        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
+        <div className="px-4 pb-6 space-y-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Dividir entre membros</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              Total: <strong className="text-slate-700 dark:text-slate-300">{formatCurrency(valorTotal)}</strong>
+            </p>
+          </div>
+
+          {/* Toggle modo */}
+          <div className="flex rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-600">
+            {[
+              { id: 'percentual', label: '% Porcentagem' },
+              { id: 'valor',      label: 'R$ Valor' },
+            ].map(opt => (
+              <button key={opt.id} type="button" onClick={() => setModo(opt.id)}
+                className={`flex-1 py-2.5 text-xs font-semibold transition-colors
+                  ${modo === opt.id
+                    ? 'bg-primary text-white'
+                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Lista de membros */}
+          <div className="space-y-2">
+            {linhas.map((l, idx) => {
+              const valor = +(valorTotal * l.percentual / 100).toFixed(2)
+              return (
+                <div key={l.user_id} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl px-3 py-2.5">
+                  <Avatar nome={l.nome} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{l.nome}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                      {modo === 'percentual' ? formatCurrency(valor) : `${l.percentual.toFixed(2)}%`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={modo === 'percentual' ? 100 : valorTotal}
+                      step={modo === 'percentual' ? 1 : 0.01}
+                      value={modo === 'percentual'
+                        ? l.percentual
+                        : valor}
+                      onChange={e => modo === 'percentual'
+                        ? updatePercentual(idx, e.target.value)
+                        : updateValor(idx, e.target.value)
+                      }
+                      className="w-20 text-right text-sm font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 outline-none focus:border-primary text-slate-800 dark:text-slate-100"
+                    />
+                    <span className="text-xs text-slate-400 dark:text-slate-500 w-3">
+                      {modo === 'percentual' ? '%' : ''}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Status soma */}
+          <div className={`text-center text-xs font-medium px-3 py-2 rounded-xl
+            ${podeSubmeter
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+              : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'}`}>
+            Soma: {somaPct.toFixed(2)}% {podeSubmeter ? '✓' : '— precisa ser 100%'}
+          </div>
+
+          <div className="flex gap-2">
+            <button type="button" onClick={dividirIgualmente}
+              className="px-3 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-xs font-semibold">
+              ↺ Igualmente
+            </button>
+            <button type="button" onClick={onClose}
+              className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 text-sm font-medium">
+              Cancelar
+            </button>
+            <button type="button" onClick={handleSave} disabled={!podeSubmeter || saving}
+              className="flex-1 py-3 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
+              {saving ? 'Salvando...' : 'Aplicar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── Sheet: selecionar quem pagou ─────────────────────────────────────────────
+function PagadorSheet({ open, lancamento, membros, onClose, onConfirm }) {
+  const [selected, setSelected] = useState(null)
+  const [saving, setSaving]     = useState(false)
+
+  useEffect(() => {
+    if (open) setSelected(lancamento?.pago_por_user_id ?? null)
+  }, [open, lancamento])
+
+  if (!open) return null
+
+  const handleConfirm = async () => {
+    if (!selected) return
+    setSaving(true)
+    const m = membros.find(x => x.user_id === selected)
+    const r = await onConfirm(selected, m?.nome ?? null)
+    setSaving(false)
+    if (!r?.error) onClose()
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
+        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
+        <div className="px-4 pb-6 space-y-3">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Quem pagou?</h3>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {lancamento?.descricao} · {formatCurrency(Number(lancamento?.valor ?? 0))}
+          </p>
+
+          <div className="space-y-1.5">
+            {membros.map(m => (
+              <button key={m.user_id} type="button"
+                onClick={() => setSelected(m.user_id)}
+                className={`w-full flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors
+                  ${selected === m.user_id
+                    ? 'bg-primary/10 dark:bg-primary/20 border-2 border-primary'
+                    : 'bg-slate-50 dark:bg-slate-700/50 border-2 border-transparent'}`}>
+                <Avatar nome={m.nome} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{m.nome}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{m.email}</p>
+                </div>
+                {selected === m.user_id && (
+                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
+                      <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 text-sm font-medium">
+              Cancelar
+            </button>
+            <button type="button" onClick={handleConfirm} disabled={!selected || saving}
+              className="flex-1 py-3 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
+              {saving ? 'Salvando...' : '✓ Confirmar pagamento'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // TELA 2 — Detalhe da família selecionada
 // ══════════════════════════════════════════════════════════════════════════════
@@ -526,6 +743,9 @@ function FamiliaDetailScreen({
   const [usuarioSelecionado, setUsuario] = useState(null)
   const [convidando, setConvidando]     = useState(false)
   const [showMembros, setShowMembros]   = useState(false)
+  const [divisaoTarget, setDivisaoTarget] = useState(null) // lançamento sendo dividido
+  const [pagadorTarget, setPagadorTarget] = useState(null) // lançamento para confirmar pagador
+  const [showSaldos, setShowSaldos]     = useState(false)
 
   // Fetch direto — usa familia.id da prop, nunca depende de familiaAtualId
   const fetchData = useCallback(async () => {
@@ -547,9 +767,10 @@ function FamiliaDetailScreen({
   const prevMonth = () => { if (month === 1) { setYear(y => y-1); setMonth(12) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setYear(y => y+1); setMonth(1) } else setMonth(m => m+1) }
 
-  // Wrapper: insere e recarrega lista local
+  // Wrapper: insere com divisão igualitária default e recarrega lista local
   const handleAddLancamento = useCallback(async (payload) => {
     if (!familia?.id) { addToast('Família não encontrada.', 'error'); return { error: 'sem família' } }
+    const divisao = divisaoIgualitaria(membros)
     const { data, error } = await supabase
       .from('lancamentos_familia')
       .insert({
@@ -557,6 +778,7 @@ function FamiliaDetailScreen({
         familia_id:      familia.id,
         criado_por:      user.id,
         criado_por_nome: user.user_metadata?.full_name || user.email.split('@')[0],
+        divisao,
       })
       .select()
       .single()
@@ -565,7 +787,42 @@ function FamiliaDetailScreen({
       [...prev, data].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
     )
     return { error: null }
-  }, [familia?.id, user, addToast])
+  }, [familia?.id, user, membros, addToast])
+
+  // Salva nova divisão de um lançamento
+  const handleSaveDivisao = useCallback(async (novaDivisao) => {
+    if (!divisaoTarget) return { error: 'sem alvo' }
+    const { error } = await supabase
+      .from('lancamentos_familia')
+      .update({ divisao: novaDivisao })
+      .eq('id', divisaoTarget.id)
+    if (error) { addToast(error.message, 'error'); return { error: error.message } }
+    setLancamentos(prev => prev.map(l =>
+      l.id === divisaoTarget.id ? { ...l, divisao: novaDivisao } : l
+    ))
+    addToast('Divisão atualizada!', 'success')
+    return { error: null }
+  }, [divisaoTarget, addToast])
+
+  // Confirma pagamento + quem pagou
+  const handleConfirmPagador = useCallback(async (pagadorId, pagadorNome) => {
+    if (!pagadorTarget) return { error: 'sem alvo' }
+    const { error } = await supabase
+      .from('lancamentos_familia')
+      .update({
+        pago:              true,
+        pago_por_user_id:  pagadorId,
+        pago_por_nome:     pagadorNome,
+      })
+      .eq('id', pagadorTarget.id)
+    if (error) { addToast(error.message, 'error'); return { error: error.message } }
+    setLancamentos(prev => prev.map(l =>
+      l.id === pagadorTarget.id
+        ? { ...l, pago: true, pago_por_user_id: pagadorId, pago_por_nome: pagadorNome }
+        : l
+    ))
+    return { error: null }
+  }, [pagadorTarget, addToast])
 
   const handleConvite = async () => {
     if (!usuarioSelecionado) return
@@ -583,17 +840,24 @@ function FamiliaDetailScreen({
     setLancamentos(prev => prev.filter(l => l.id !== id))
   }, [addToast])
 
-  const handleToggle = useCallback(async (id, pago) => {
-    const pago_por_nome = pago
-      ? (user.user_metadata?.full_name || user.email.split('@')[0])
-      : null
+  const handleToggle = useCallback(async (item, pago) => {
+    // Ao marcar como PAGO: abre o picker para escolher quem pagou
+    if (pago) {
+      setPagadorTarget(item)
+      return
+    }
+    // Ao DESMARCAR: limpa pagador também
     const { error } = await supabase
       .from('lancamentos_familia')
-      .update({ pago, pago_por_nome })
-      .eq('id', id)
+      .update({ pago: false, pago_por_nome: null, pago_por_user_id: null })
+      .eq('id', item.id)
     if (error) { addToast(error.message, 'error'); return }
-    setLancamentos(prev => prev.map(l => l.id === id ? { ...l, pago, pago_por_nome } : l))
-  }, [user, addToast])
+    setLancamentos(prev => prev.map(l =>
+      l.id === item.id
+        ? { ...l, pago: false, pago_por_nome: null, pago_por_user_id: null }
+        : l
+    ))
+  }, [addToast])
 
   const handleSair = async () => {
     if (!window.confirm('Sair da família? Seus lançamentos compartilhados permanecem.')) return
@@ -606,6 +870,14 @@ function FamiliaDetailScreen({
   const totalEntradas = lancamentos.filter(l => l.tipo === 'Entrada').reduce((s,l) => s + Number(l.valor), 0)
   const totalSaidas   = lancamentos.filter(l => l.tipo === 'Saída').reduce((s,l) => s + Number(l.valor), 0)
   const totalPendente = lancamentos.filter(l => l.tipo === 'Saída' && !l.pago).reduce((s,l) => s + Number(l.valor), 0)
+
+  // Saldos entre membros (Splitwise)
+  const saldos = calcularSaldos(lancamentos, user.id)
+  const saldosArray = Object.entries(saldos)
+    .filter(([_, s]) => Math.abs(s.valor) > 0.01)
+    .map(([uid, s]) => ({ user_id: uid, ...s }))
+  const totalMeDevem  = saldosArray.filter(s => s.valor > 0).reduce((sum, s) => sum + s.valor, 0)
+  const totalEuDevo   = saldosArray.filter(s => s.valor < 0).reduce((sum, s) => sum + Math.abs(s.valor), 0)
 
   return (
     <div className="min-h-screen bg-background flex flex-col page-enter">
@@ -788,6 +1060,55 @@ function FamiliaDetailScreen({
           </div>
         </div>
 
+        {/* Saldos entre membros (Splitwise) */}
+        {saldosArray.length > 0 && (
+          <div className="mx-4 mt-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <button onClick={() => setShowSaldos(v => !v)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg flex-shrink-0">
+                💰
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Acertos da família</p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {totalMeDevem > 0 && (
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      ↘ Te devem {formatCurrency(totalMeDevem)}
+                    </span>
+                  )}
+                  {totalEuDevo > 0 && (
+                    <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                      ↗ Você deve {formatCurrency(totalEuDevo)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-slate-400 text-xs flex-shrink-0">{showSaldos ? '▲' : '▼'}</span>
+            </button>
+            {showSaldos && (
+              <div className="border-t border-slate-100 dark:border-slate-700">
+                {saldosArray.map(s => {
+                  const teDeve = s.valor > 0
+                  return (
+                    <div key={s.user_id} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50 dark:border-slate-700 last:border-0">
+                      <Avatar nome={s.nome} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{s.nome}</p>
+                        <p className={`text-[11px] font-medium ${teDeve ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                          {teDeve ? 'te deve' : 'você deve'}
+                        </p>
+                      </div>
+                      <p className={`text-sm font-bold flex-shrink-0 ${teDeve ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        {formatCurrency(Math.abs(s.valor))}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Lançamentos */}
         <div className="px-4 mt-4">
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
@@ -802,13 +1123,15 @@ function FamiliaDetailScreen({
           ) : (
             <div className="space-y-2">
               {lancamentos.map(item => {
-                const isEntr = item.tipo === 'Entrada'
+                const isEntr   = item.tipo === 'Entrada'
+                const divisao  = item.divisao ?? []
+                const valorTot = Number(item.valor ?? 0)
                 return (
                   <div key={item.id}
-                    className={`bg-white dark:bg-slate-800 rounded-2xl border transition-all
+                    className={`bg-white dark:bg-slate-800 rounded-2xl border transition-all overflow-hidden
                       ${item.pago ? 'border-emerald-100 dark:border-emerald-900/30 opacity-70' : 'border-slate-100 dark:border-slate-700'}`}>
                     <div className="flex items-center gap-3 px-3 py-3">
-                      <button onClick={() => handleToggle(item.id, !item.pago)}
+                      <button onClick={() => handleToggle(item, !item.pago)}
                         className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
                           ${item.pago ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-500'}`}>
                         {item.pago && (
@@ -825,10 +1148,14 @@ function FamiliaDetailScreen({
                           <p className="text-xs text-slate-400 dark:text-slate-500">{item.categoria}</p>
                           <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
                           <p className="text-xs text-slate-400 dark:text-slate-500">dia {item.data_vencimento.split('-')[2]}</p>
-                          <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                            {item.pago ? `✓ pago por ${item.pago_por_nome}` : `por ${item.criado_por_nome}`}
-                          </p>
+                          {item.pago && item.pago_por_nome && (
+                            <>
+                              <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
+                              <p className="text-xs text-emerald-600 dark:text-emerald-400 truncate">
+                                ✓ pago por {item.pago_por_nome}
+                              </p>
+                            </>
+                          )}
                         </div>
                       </div>
                       <p className={`text-sm font-bold flex-shrink-0 ${isEntr ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -841,6 +1168,31 @@ function FamiliaDetailScreen({
                         </svg>
                       </button>
                     </div>
+
+                    {/* Divisão entre membros */}
+                    {divisao.length > 0 && (
+                      <button type="button" onClick={() => setDivisaoTarget(item)}
+                        className="w-full px-3 py-2 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors text-left">
+                        <div className="flex -space-x-2 flex-shrink-0">
+                          {divisao.slice(0, 5).map(d => (
+                            <Avatar key={d.user_id} nome={d.nome} size="sm" />
+                          ))}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {divisao.map(d =>
+                              `${d.nome.split(' ')[0]} ${d.percentual.toFixed(0)}%`
+                            ).join(' · ')}
+                          </p>
+                          <p className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium">
+                            Toque para editar divisão
+                          </p>
+                        </div>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 flex-shrink-0">
+                          <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 )
               })}
@@ -868,6 +1220,22 @@ function FamiliaDetailScreen({
           else addToast('Família atualizada!', 'success')
           return r
         }}
+      />
+
+      <DivisaoEditorSheet
+        open={!!divisaoTarget}
+        lancamento={divisaoTarget}
+        membros={membros}
+        onClose={() => setDivisaoTarget(null)}
+        onSave={handleSaveDivisao}
+      />
+
+      <PagadorSheet
+        open={!!pagadorTarget}
+        lancamento={pagadorTarget}
+        membros={membros}
+        onClose={() => setPagadorTarget(null)}
+        onConfirm={handleConfirmPagador}
       />
     </div>
   )
