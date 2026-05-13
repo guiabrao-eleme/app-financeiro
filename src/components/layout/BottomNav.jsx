@@ -100,7 +100,7 @@ export default function BottomNav({ active, onChange, badges = {} }) {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 z-40"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 z-40"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div ref={containerRef} className="relative flex items-center justify-around px-0.5 py-1">

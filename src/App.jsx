@@ -90,7 +90,7 @@ function AppRouter() {
   const navPage = ['dashboard', 'registros', 'familia', 'calendario', 'anual', 'observacoes'].includes(appPage) ? appPage : 'dashboard'
 
   return (
-    <div>
+    <div className="mx-auto max-w-xl bg-background min-h-screen relative shadow-xl shadow-slate-200/40 dark:shadow-black/40">
       <div key={appPage}>{renderPage()}</div>
 
       {appPage !== 'perfil' && (
@@ -105,10 +105,14 @@ function AppRouter() {
       {appPage !== 'observacoes' && appPage !== 'perfil' && (
         <button
           onClick={() => setShowModal(true)}
-          className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg
-            flex items-center justify-center text-2xl font-light hover:bg-primary/90 active:scale-95
+          className="fixed w-14 h-14 bg-primary text-white rounded-full shadow-lg
+            flex items-center justify-center text-3xl font-light hover:bg-primary/90 active:scale-95
             transition-all z-50"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+          style={{
+            // Posicionado relativo ao container max-w-xl quando em telas grandes
+            bottom: 'calc(env(safe-area-inset-bottom) + 5rem)',
+            right: 'max(1rem, calc((100vw - 36rem) / 2 + 1rem))',
+          }}
           aria-label="Novo registro"
         >
           +

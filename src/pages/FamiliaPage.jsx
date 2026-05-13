@@ -164,7 +164,7 @@ function EditarFamiliaSheet({ open, familia, onClose, onSave }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[90dvh] overflow-y-auto">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[90dvh] overflow-y-auto">
         <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
         <div className="px-4 pb-6 space-y-4">
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Editar família</h3>
@@ -286,7 +286,7 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
         <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
         <div className="px-4 pb-6 space-y-4">
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Nova conta da família</h3>
@@ -557,7 +557,7 @@ function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[90dvh] overflow-y-auto">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[90dvh] overflow-y-auto">
         <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
         <div className="px-4 pb-6 space-y-4">
           <div>
@@ -672,7 +672,7 @@ function PagadorSheet({ open, lancamento, membros, onClose, onConfirm }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
         <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
         <div className="px-4 pb-6 space-y-3">
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Quem pagou?</h3>
@@ -1203,8 +1203,11 @@ function FamiliaDetailScreen({
 
       {/* FAB */}
       <button onClick={() => setShowAdd(true)}
-        className="fixed right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center text-2xl font-light hover:bg-primary/90 active:scale-95 transition-all z-30"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}>
+        className="fixed w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center text-3xl font-light hover:bg-primary/90 active:scale-95 transition-all z-30"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom) + 5rem)',
+          right: 'max(1rem, calc((100vw - 36rem) / 2 + 1rem))',
+        }}>
         +
       </button>
 

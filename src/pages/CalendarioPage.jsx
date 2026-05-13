@@ -24,7 +24,7 @@ function ExportSheet({ open, onClose, onExportAll, onExportNotify, loading }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
         <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
         <div className="px-4 pb-6 space-y-3">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">

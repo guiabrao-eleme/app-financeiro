@@ -520,9 +520,10 @@ export default function NovoRegistroModal({
         onClick={handleClose}
       />
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl
+        className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl z-50 bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl
           transition-transform duration-300 ease-out max-h-[92vh] overflow-y-auto
           ${visible ? 'translate-y-0' : 'translate-y-full'}`}
+        style={{ transform: visible ? 'translate(-50%, 0)' : 'translate(-50%, 100%)' }}
       >
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full" />
