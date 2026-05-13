@@ -5,56 +5,71 @@ import { useAuth } from '../contexts/AuthContext'
 export function useFamilia() {
   const { user } = useAuth()
 
-  const [familia, setFamilia]               = useState(null)   // família atual
-  const [membros, setMembros]               = useState([])     // membros da família
-  const [convitePendente, setConvitePendente] = useState(null) // convite recebido
-  const [lancamentos, setLancamentos]       = useState([])     // contas compartilhadas
-  const [loading, setLoading]               = useState(true)
+  const [familias, setFamilias]               = useState([])    // todas as famílias do user
+  const [familiaAtualId, setFamiliaAtualId]   = useState(null)  // id da família selecionada
+  const [membros, setMembros]                 = useState([])
+  const [convitesPendentes, setConvitesPendentes] = useState([])
+  const [lancamentos, setLancamentos]         = useState([])
+  const [loading, setLoading]                 = useState(true)
+
+  // familia atual (derivado)
+  const familia = familias.find(f => f.id === familiaAtualId) ?? null
+
+  // ── Carrega membros de uma família ────────────────────────────────────────
+  const loadMembros = useCallback(async (familiaId) => {
+    const { data } = await supabase
+      .from('familia_membros')
+      .select('*')
+      .eq('familia_id', familiaId)
+      .order('joined_at', { ascending: true })
+    setMembros(data ?? [])
+  }, [])
 
   // ── Carrega tudo ──────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     if (!user) return
     setLoading(true)
 
-    // 1. Verifica se já está em alguma família
-    const { data: membro } = await supabase
+    // 1. Busca todos os vínculos do user
+    const { data: memberships } = await supabase
       .from('familia_membros')
       .select('familia_id, role')
       .eq('user_id', user.id)
-      .maybeSingle()
 
-    if (membro?.familia_id) {
-      // Carrega info da família
-      const { data: fam } = await supabase
+    if (memberships?.length > 0) {
+      const ids = memberships.map(m => m.familia_id)
+
+      const { data: fams } = await supabase
         .from('familias')
         .select('*')
-        .eq('id', membro.familia_id)
-        .single()
+        .in('id', ids)
+        .order('nome', { ascending: true })
 
-      // Carrega membros
-      const { data: mems } = await supabase
-        .from('familia_membros')
-        .select('*')
-        .eq('familia_id', membro.familia_id)
-        .order('joined_at', { ascending: true })
+      const familiasComRole = (fams ?? []).map(f => ({
+        ...f,
+        meu_role: memberships.find(m => m.familia_id === f.id)?.role,
+      }))
 
-      setFamilia(fam ? { ...fam, meu_role: membro.role } : null)
-      setMembros(mems ?? [])
-      setConvitePendente(null)
+      setFamilias(familiasComRole)
+
+      // Mantém a seleção atual se ainda válida, senão usa a primeira
+      setFamiliaAtualId(prev =>
+        prev && ids.includes(prev) ? prev : ids[0]
+      )
+      setConvitesPendentes([])
     } else {
-      // 2. Verifica convites pendentes pelo e-mail do usuário
-      const { data: convite } = await supabase
+      // 2. Sem família — verifica convites pendentes
+      const { data: convites } = await supabase
         .from('familia_convites')
         .select('*')
         .eq('email', user.email)
         .eq('status', 'pendente')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
 
-      setFamilia(null)
+      setFamilias([])
+      setFamiliaAtualId(null)
       setMembros([])
-      setConvitePendente(convite ?? null)
+      setConvitesPendentes(convites ?? [])
     }
 
     setLoading(false)
@@ -62,9 +77,21 @@ export function useFamilia() {
 
   useEffect(() => { load() }, [load])
 
+  // Recarrega membros quando troca de família
+  useEffect(() => {
+    if (familiaAtualId) loadMembros(familiaAtualId)
+    else setMembros([])
+  }, [familiaAtualId, loadMembros])
+
+  // ── Trocar família ativa ──────────────────────────────────────────────────
+  const trocarFamilia = useCallback((id) => {
+    setFamiliaAtualId(id)
+    setLancamentos([])
+  }, [])
+
   // ── Carrega lançamentos do mês ────────────────────────────────────────────
   const fetchLancamentos = useCallback(async (year, month) => {
-    if (!familia) return
+    if (!familiaAtualId) return
     const pad  = n => String(n).padStart(2, '0')
     const last = new Date(year, month, 0).getDate()
     const start = `${year}-${pad(month)}-01`
@@ -73,19 +100,16 @@ export function useFamilia() {
     const { data } = await supabase
       .from('lancamentos_familia')
       .select('*')
-      .eq('familia_id', familia.id)
+      .eq('familia_id', familiaAtualId)
       .gte('data_vencimento', start)
       .lte('data_vencimento', end)
       .order('data_vencimento', { ascending: true })
 
     setLancamentos(data ?? [])
-  }, [familia])
+  }, [familiaAtualId])
 
   // ── Criar família ─────────────────────────────────────────────────────────
   const createFamilia = useCallback(async (nome) => {
-    // Gera o ID client-side para evitar problema de RLS no .select() pós-insert:
-    // a política SELECT usa get_my_familia_id() que consulta familia_membros,
-    // mas esse registro ainda não existe no momento do insert em familias.
     const familiaId = crypto.randomUUID()
 
     const { error: e1 } = await supabase
@@ -103,12 +127,12 @@ export function useFamilia() {
         role:       'admin',
       })
     if (e2) {
-      // Reverte a familia se o membro falhou
       await supabase.from('familias').delete().eq('id', familiaId)
       return { error: e2.message }
     }
 
     await load()
+    setFamiliaAtualId(familiaId)
     return { error: null }
   }, [user, load])
 
@@ -118,7 +142,6 @@ export function useFamilia() {
     const emailNorm = email.toLowerCase().trim()
     if (emailNorm === user.email) return { error: 'Você já é membro desta família.' }
 
-    // Verifica se já é membro
     const { data: jaEh } = await supabase
       .from('familia_membros')
       .select('id')
@@ -130,12 +153,12 @@ export function useFamilia() {
     const { error } = await supabase
       .from('familia_convites')
       .upsert({
-        familia_id:          familia.id,
-        familia_nome:        familia.nome,
-        email:               emailNorm,
-        convidado_por:       user.id,
-        convidado_por_nome:  user.user_metadata?.full_name || user.email.split('@')[0],
-        status:              'pendente',
+        familia_id:         familia.id,
+        familia_nome:       familia.nome,
+        email:              emailNorm,
+        convidado_por:      user.id,
+        convidado_por_nome: user.user_metadata?.full_name || user.email.split('@')[0],
+        status:             'pendente',
       }, { onConflict: 'familia_id,email' })
 
     if (error) return { error: error.message }
@@ -143,13 +166,14 @@ export function useFamilia() {
   }, [familia, user])
 
   // ── Aceitar convite ───────────────────────────────────────────────────────
-  const aceitarConvite = useCallback(async () => {
-    if (!convitePendente) return { error: 'Nenhum convite pendente.' }
+  const aceitarConvite = useCallback(async (convite) => {
+    const alvo = convite ?? convitesPendentes[0]
+    if (!alvo) return { error: 'Nenhum convite pendente.' }
 
     const { error: e1 } = await supabase
       .from('familia_membros')
       .insert({
-        familia_id: convitePendente.familia_id,
+        familia_id: alvo.familia_id,
         user_id:    user.id,
         email:      user.email,
         nome:       user.user_metadata?.full_name || user.email.split('@')[0],
@@ -160,21 +184,22 @@ export function useFamilia() {
     await supabase
       .from('familia_convites')
       .update({ status: 'aceito' })
-      .eq('id', convitePendente.id)
+      .eq('id', alvo.id)
 
     await load()
     return { error: null }
-  }, [convitePendente, user, load])
+  }, [convitesPendentes, user, load])
 
   // ── Recusar convite ───────────────────────────────────────────────────────
-  const recusarConvite = useCallback(async () => {
-    if (!convitePendente) return
+  const recusarConvite = useCallback(async (convite) => {
+    const alvo = convite ?? convitesPendentes[0]
+    if (!alvo) return
     await supabase
       .from('familia_convites')
       .update({ status: 'recusado' })
-      .eq('id', convitePendente.id)
-    setConvitePendente(null)
-  }, [convitePendente])
+      .eq('id', alvo.id)
+    setConvitesPendentes(prev => prev.filter(c => c.id !== alvo.id))
+  }, [convitesPendentes])
 
   // ── Sair da família ───────────────────────────────────────────────────────
   const sairDaFamilia = useCallback(async () => {
@@ -185,11 +210,9 @@ export function useFamilia() {
       .eq('familia_id', familia.id)
       .eq('user_id', user.id)
     if (error) return { error: error.message }
-    setFamilia(null)
-    setMembros([])
-    setLancamentos([])
+    await load()
     return { error: null }
-  }, [familia, user])
+  }, [familia, user, load])
 
   // ── Remover membro (admin) ────────────────────────────────────────────────
   const removerMembro = useCallback(async (membroUserId) => {
@@ -211,14 +234,16 @@ export function useFamilia() {
       .from('lancamentos_familia')
       .insert({
         ...payload,
-        familia_id:     familia.id,
-        criado_por:     user.id,
+        familia_id:      familia.id,
+        criado_por:      user.id,
         criado_por_nome: user.user_metadata?.full_name || user.email.split('@')[0],
       })
       .select()
       .single()
     if (error) return { error: error.message }
-    setLancamentos(prev => [...prev, data].sort((a,b) => a.data_vencimento.localeCompare(b.data_vencimento)))
+    setLancamentos(prev =>
+      [...prev, data].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
+    )
     return { error: null }
   }, [familia, user])
 
@@ -249,8 +274,12 @@ export function useFamilia() {
     return updateLancamento(id, { pago, pago_por_nome })
   }, [user, updateLancamento])
 
+  // convitePendente (compat. com código antigo — primeiro da lista)
+  const convitePendente = convitesPendentes[0] ?? null
+
   return {
-    familia, membros, convitePendente, lancamentos, loading,
+    familia, familias, familiaAtualId, trocarFamilia,
+    membros, convitePendente, convitesPendentes, lancamentos, loading,
     fetchLancamentos,
     createFamilia, convidarMembro,
     aceitarConvite, recusarConvite,

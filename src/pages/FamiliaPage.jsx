@@ -293,7 +293,8 @@ export default function FamiliaPage({ onConviteHandled }) {
   const { user } = useAuth()
   const { addToast, ToastContainer } = useToast()
   const {
-    familia, membros, convitePendente, lancamentos, loading,
+    familia, familias, familiaAtualId, trocarFamilia,
+    membros, convitePendente, convitesPendentes, lancamentos, loading,
     fetchLancamentos, createFamilia, convidarMembro,
     aceitarConvite, recusarConvite, sairDaFamilia, removerMembro,
     addLancamento, deleteLancamento, togglePago,
@@ -302,16 +303,17 @@ export default function FamiliaPage({ onConviteHandled }) {
   const now   = new Date()
   const [year, setYear]     = useState(now.getFullYear())
   const [month, setMonth]   = useState(now.getMonth() + 1)
-  const [showAdd, setShowAdd]           = useState(false)
-  const [showConvite, setShowConvite]   = useState(false)
+  const [showAdd, setShowAdd]             = useState(false)
+  const [showConvite, setShowConvite]     = useState(false)
+  const [showCriarNova, setShowCriarNova] = useState(false)
   const [usuarioSelecionado, setUsuarioSelecionado] = useState(null)
-  const [convidando, setConvidando]     = useState(false)
+  const [convidando, setConvidando]       = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
-  const [showMembros, setShowMembros] = useState(false)
+  const [showMembros, setShowMembros]     = useState(false)
 
   useEffect(() => {
     if (familia) fetchLancamentos(year, month)
-  }, [familia, year, month, fetchLancamentos])
+  }, [familia, familiaAtualId, year, month, fetchLancamentos])
 
   const prevMonth = () => {
     if (month === 1) { setYear(y => y - 1); setMonth(12) }
@@ -333,8 +335,8 @@ export default function FamiliaPage({ onConviteHandled }) {
 
   const handleRecusar = async () => {
     await recusarConvite()
-    onConviteHandled?.()
     addToast('Convite recusado.', 'info')
+    onConviteHandled?.()
   }
 
   const handleConvite = async () => {
@@ -379,20 +381,30 @@ export default function FamiliaPage({ onConviteHandled }) {
           </div>
         </div>
 
-        {/* Convite pendente */}
-        {convitePendente && (
+        {/* Convites pendentes */}
+        {convitesPendentes.map(convite => (
           <ConviteCard
-            convite={convitePendente}
-            onAceitar={handleAceitar}
-            onRecusar={handleRecusar}
+            key={convite.id}
+            convite={convite}
+            onAceitar={() => {
+              setActionLoading(true)
+              aceitarConvite(convite).then(r => {
+                setActionLoading(false)
+                if (r?.error) { addToast(r.error, 'error'); return }
+                addToast('Bem-vindo à família! 🎉', 'success')
+                onConviteHandled?.()
+              })
+            }}
+            onRecusar={() => {
+              recusarConvite(convite)
+              addToast('Convite recusado.', 'info')
+            }}
             loading={actionLoading}
           />
-        )}
+        ))}
 
-        {/* Setup sem convite */}
-        {!convitePendente && (
-          <SetupFamilia onCreate={createFamilia} />
-        )}
+        {/* Setup / criar família */}
+        <SetupFamilia onCreate={createFamilia} />
       </div>
     )
   }
@@ -412,13 +424,37 @@ export default function FamiliaPage({ onConviteHandled }) {
           <div className="flex items-center gap-2">
             <SkyToggle checked={isDark} onChange={toggleTheme} />
             {familia.meu_role === 'admin' && (
-              <button onClick={() => setShowConvite(v => !v)}
+              <button onClick={() => { setShowConvite(v => !v); setShowCriarNova(false) }}
                 className="text-xs bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg font-medium transition-colors">
                 + Convidar
               </button>
             )}
           </div>
         </div>
+
+        {/* Seletor de famílias (quando tiver mais de uma) */}
+        {familias.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 mb-3 scrollbar-none">
+            {familias.map(f => (
+              <button
+                key={f.id}
+                onClick={() => { trocarFamilia(f.id); setShowConvite(false); setShowCriarNova(false) }}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors
+                  ${f.id === familiaAtualId
+                    ? 'bg-white text-primary'
+                    : 'bg-white/15 text-white/80 hover:bg-white/25'}`}
+              >
+                {f.nome}
+              </button>
+            ))}
+            <button
+              onClick={() => { setShowCriarNova(v => !v); setShowConvite(false) }}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
+            >
+              + Nova
+            </button>
+          </div>
+        )}
 
         {/* Navegação de mês */}
         <div className="flex items-center justify-between bg-white/10 rounded-2xl px-2 py-2">
@@ -429,6 +465,19 @@ export default function FamiliaPage({ onConviteHandled }) {
       </div>
 
       <div className="flex-1 overflow-y-auto pb-36">
+
+        {/* ── Criar nova família ── */}
+        {showCriarNova && (
+          <div className="mx-4 mt-4">
+            <SetupFamilia
+              onCreate={async (nome) => {
+                const r = await createFamilia(nome)
+                if (!r?.error) setShowCriarNova(false)
+                return r
+              }}
+            />
+          </div>
+        )}
 
         {/* ── Painel de convite (admin) ── */}
         {showConvite && (
