@@ -126,12 +126,12 @@ export function useFamilia() {
   }, [familiaAtualId])
 
   // ── Criar família ─────────────────────────────────────────────────────────
-  const createFamilia = useCallback(async (nome) => {
+  const createFamilia = useCallback(async (nome, icone = '👨‍👩‍👧‍👦') => {
     const familiaId = crypto.randomUUID()
 
     const { error: e1 } = await supabase
       .from('familias')
-      .insert({ id: familiaId, nome: nome.trim(), criado_por: user.id })
+      .insert({ id: familiaId, nome: nome.trim(), icone, criado_por: user.id })
     if (e1) return { error: e1.message }
 
     const { error: e2 } = await supabase
@@ -149,9 +149,19 @@ export function useFamilia() {
     }
 
     await load()
-    setFamiliaAtualId(familiaId)
-    return { error: null }
+    return { error: null, familiaId }
   }, [user, load])
+
+  // ── Atualizar família (nome / ícone) ──────────────────────────────────────
+  const updateFamilia = useCallback(async (id, updates) => {
+    const { error } = await supabase
+      .from('familias')
+      .update(updates)
+      .eq('id', id)
+    if (error) return { error: error.message }
+    setFamilias(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f))
+    return { error: null }
+  }, [])
 
   // ── Convidar membro ───────────────────────────────────────────────────────
   const convidarMembro = useCallback(async (email) => {
@@ -311,7 +321,7 @@ export function useFamilia() {
     familia, familias, familiaAtualId, trocarFamilia,
     membros, convitePendente, convitesPendentes, convitesEnviados, lancamentos, loading,
     fetchLancamentos,
-    createFamilia, convidarMembro, cancelarConviteEnviado,
+    createFamilia, updateFamilia, convidarMembro, cancelarConviteEnviado,
     aceitarConvite, recusarConvite,
     sairDaFamilia, removerMembro,
     addLancamento, updateLancamento, deleteLancamento, togglePago,

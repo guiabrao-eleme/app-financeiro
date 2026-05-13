@@ -2,6 +2,37 @@
 import { supabase } from '../lib/supabase'
 
 /**
+ * Busca resumos (a receber / a pagar do mês) para uma lista de famílias.
+ * Retorna objeto { [familiaId]: { receber, pagar } }
+ */
+export async function fetchResumosFamilias(familyIds, year, month) {
+  if (!familyIds?.length) return {}
+  const pad  = n => String(n).padStart(2, '0')
+  const last = new Date(year, month, 0).getDate()
+  const start = `${year}-${pad(month)}-01`
+  const end   = `${year}-${pad(month)}-${pad(last)}`
+
+  const { data } = await supabase
+    .from('lancamentos_familia')
+    .select('familia_id, tipo, valor, pago')
+    .in('familia_id', familyIds)
+    .gte('data_vencimento', start)
+    .lte('data_vencimento', end)
+    .eq('pago', false)
+
+  const resumos = {}
+  familyIds.forEach(id => { resumos[id] = { receber: 0, pagar: 0 } })
+
+  for (const l of (data ?? [])) {
+    const v = Number(l.valor)
+    if (l.tipo === 'Entrada') resumos[l.familia_id].receber += v
+    else                       resumos[l.familia_id].pagar   += v
+  }
+
+  return resumos
+}
+
+/**
  * Busca lançamentos de todas as famílias do usuário no intervalo de datas.
  * Retorna array normalizado com _origem:'familia' e _familia_nome.
  *

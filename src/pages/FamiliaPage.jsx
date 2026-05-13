@@ -4,9 +4,19 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../utils/format'
+import { fetchResumosFamilias } from '../utils/familiaLancamentos'
 import { useToast } from '../components/ui/Toast'
 import SkyToggle from '../components/ui/SkyToggle'
 import MonthYearPicker from '../components/ui/MonthYearPicker'
+
+// Emojis comuns para ícones de família
+const ICONES_FAMILIA = [
+  '👨‍👩‍👧‍👦','👨‍👩‍👧','👨‍👩‍👦','👩‍👧','👨‍👧','👩‍👦','👨‍👦',
+  '💑','👫','👭','👬','❤️','🏠','🏡','🏘️',
+  '🐶','🐱','🐰','🦊','🐻','🐼','🐨',
+  '🎓','🎂','🎉','⭐','🌟','✨','🌈',
+  '🍕','🍔','🍰','☕','🌳','🌴','🌻',
+]
 
 const CATEGORIAS = ['Alimentação','Moradia','Transporte','Saúde','Educação','Lazer','Roupas','Serviços','Pets','Outros']
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -50,42 +60,138 @@ function ConviteCard({ convite, onAceitar, onRecusar, loading }) {
   )
 }
 
+// ─── Picker de ícones (grade de emojis) ───────────────────────────────────────
+function IconPicker({ selected, onSelect }) {
+  return (
+    <div className="grid grid-cols-7 gap-1.5 max-h-44 overflow-y-auto p-1">
+      {ICONES_FAMILIA.map(emoji => (
+        <button
+          key={emoji}
+          type="button"
+          onClick={() => onSelect(emoji)}
+          className={`aspect-square rounded-xl flex items-center justify-center text-xl transition-all
+            ${selected === emoji
+              ? 'bg-primary/15 dark:bg-primary/30 ring-2 ring-primary scale-110'
+              : 'bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 active:scale-95'}`}
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ─── Formulário criar família ─────────────────────────────────────────────────
 function CriarFamiliaForm({ onCreate, onCancel }) {
   const [nome, setNome]     = useState('')
+  const [icone, setIcone]   = useState('👨‍👩‍👧‍👦')
   const [saving, setSaving] = useState(false)
   const [erro, setErro]     = useState('')
 
   const handleCreate = async () => {
     if (!nome.trim()) return
     setSaving(true); setErro('')
-    const result = await onCreate(nome)
+    const result = await onCreate(nome, icone)
     setSaving(false)
     if (result?.error) setErro(result.error)
   }
 
   return (
     <div className="space-y-3">
-      <input type="text" value={nome} onChange={e => { setNome(e.target.value); setErro('') }}
-        onKeyDown={e => e.key === 'Enter' && handleCreate()}
-        placeholder="Nome da família (ex: Família Silva)"
-        maxLength={40} autoFocus
-        className={`w-full px-4 py-3 rounded-2xl border dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 text-sm outline-none focus:ring-2 focus:ring-primary/10 font-medium transition-colors
-          ${erro ? 'border-red-400 focus:border-red-400' : 'border-slate-200 dark:border-slate-600 focus:border-primary'}`} />
+      {/* Preview + nome */}
+      <div className="flex items-center gap-3">
+        <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0">
+          {icone}
+        </div>
+        <input type="text" value={nome} onChange={e => { setNome(e.target.value); setErro('') }}
+          onKeyDown={e => e.key === 'Enter' && handleCreate()}
+          placeholder="Nome (ex: Família Silva)"
+          maxLength={40} autoFocus
+          className={`flex-1 px-4 py-3 rounded-2xl border dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 text-sm outline-none focus:ring-2 focus:ring-primary/10 font-medium transition-colors
+            ${erro ? 'border-red-400 focus:border-red-400' : 'border-slate-200 dark:border-slate-600 focus:border-primary'}`} />
+      </div>
+
       {erro && (
         <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">⚠️ {erro}</p>
       )}
-      <div className="flex gap-2">
+
+      {/* Picker de ícone */}
+      <div>
+        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+          Escolha um ícone
+        </p>
+        <IconPicker selected={icone} onSelect={setIcone} />
+      </div>
+
+      <div className="flex gap-2 pt-1">
         <button type="button" onClick={onCancel}
           className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 text-sm font-medium">
           Cancelar
         </button>
         <button type="button" onClick={handleCreate} disabled={!nome.trim() || saving}
           className="flex-1 py-3 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
-          {saving ? 'Criando...' : 'Criar'}
+          {saving ? 'Criando...' : 'Criar família'}
         </button>
       </div>
     </div>
+  )
+}
+
+// ─── Sheet de editar família (nome e ícone) ───────────────────────────────────
+function EditarFamiliaSheet({ open, familia, onClose, onSave }) {
+  const [nome, setNome]     = useState('')
+  const [icone, setIcone]   = useState('👨‍👩‍👧‍👦')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open && familia) {
+      setNome(familia.nome ?? '')
+      setIcone(familia.icone ?? '👨‍👩‍👧‍👦')
+    }
+  }, [open, familia])
+
+  if (!open) return null
+
+  const handleSave = async () => {
+    if (!nome.trim()) return
+    setSaving(true)
+    const r = await onSave({ nome: nome.trim(), icone })
+    setSaving(false)
+    if (!r?.error) onClose()
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[90dvh] overflow-y-auto">
+        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
+        <div className="px-4 pb-6 space-y-4">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Editar família</h3>
+
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0">
+              {icone}
+            </div>
+            <input type="text" value={nome} onChange={e => setNome(e.target.value)}
+              placeholder="Nome da família"
+              maxLength={40}
+              className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 font-medium" />
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+              Ícone
+            </p>
+            <IconPicker selected={icone} onSelect={setIcone} />
+          </div>
+
+          <button type="button" onClick={handleSave} disabled={!nome.trim() || saving}
+            className="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
+            {saving ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -243,6 +349,17 @@ function FamiliaListScreen({
 }) {
   const [showCriar, setShowCriar]     = useState(false)
   const [actionLoading, setActionLoad] = useState(null) // id do convite em loading
+  const [resumos, setResumos]          = useState({}) // { familiaId: { receber, pagar } }
+
+  // Carrega resumos do mês atual para todas as famílias
+  useEffect(() => {
+    if (!familias?.length) { setResumos({}); return }
+    const now = new Date()
+    const familyIds = familias.map(f => f.id)
+    fetchResumosFamilias(familyIds, now.getFullYear(), now.getMonth() + 1)
+      .then(setResumos)
+      .catch(() => setResumos({}))
+  }, [familias])
 
   const roleLabel = (role) => role === 'admin' ? 'Admin' : 'Membro'
   const roleColor = (role) => role === 'admin'
@@ -297,26 +414,46 @@ function FamiliaListScreen({
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                   Minhas famílias
                 </p>
-                {familias.map(f => (
-                  <button key={f.id} type="button" onClick={() => onEntrar(f.id)}
-                    className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 px-5 py-4 text-left active:scale-[.98] transition-all shadow-sm hover:shadow-md">
-                    {/* Ícone */}
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-2xl flex-shrink-0">
-                      👨‍👩‍👧‍👦
-                    </div>
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base font-bold text-slate-800 dark:text-slate-100 truncate">{f.nome}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleColor(f.meu_role)}`}>
-                          {roleLabel(f.meu_role)}
-                        </span>
+                {familias.map(f => {
+                  const r = resumos[f.id] ?? { receber: 0, pagar: 0 }
+                  const temResumo = r.receber > 0 || r.pagar > 0
+                  return (
+                    <button key={f.id} type="button" onClick={() => onEntrar(f.id)}
+                      className="w-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 px-5 py-4 text-left active:scale-[.98] transition-all shadow-sm hover:shadow-md">
+                      <div className="flex items-center gap-4">
+                        {/* Ícone customizado */}
+                        <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0">
+                          {f.icone || '👨‍👩‍👧‍👦'}
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-bold text-slate-800 dark:text-slate-100 truncate">{f.nome}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleColor(f.meu_role)}`}>
+                              {roleLabel(f.meu_role)}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Seta */}
+                        <span className="text-slate-300 dark:text-slate-600 text-xl flex-shrink-0">›</span>
                       </div>
-                    </div>
-                    {/* Seta */}
-                    <span className="text-slate-300 dark:text-slate-600 text-xl flex-shrink-0">›</span>
-                  </button>
-                ))}
+
+                      {/* Resumo financeiro do mês */}
+                      {temResumo && (
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                          <div className="flex-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl px-3 py-2 text-center">
+                            <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wide">A receber</p>
+                            <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(r.receber)}</p>
+                          </div>
+                          <div className="flex-1 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2 text-center">
+                            <p className="text-[9px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wide">A pagar</p>
+                            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{formatCurrency(r.pagar)}</p>
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             )}
 
@@ -373,7 +510,7 @@ function FamiliaDetailScreen({
   familia, membros, convitesEnviados,
   isDark, toggleTheme, onVoltar,
   convidarMembro, cancelarConviteEnviado,
-  removerMembro, sairDaFamilia,
+  removerMembro, sairDaFamilia, updateFamilia,
   addLancamento, deleteLancamento, togglePago,
   addToast,
 }) {
@@ -385,6 +522,7 @@ function FamiliaDetailScreen({
   const [lancamentos, setLancamentos] = useState([])
   const [showAdd, setShowAdd]           = useState(false)
   const [showConvite, setShowConvite]   = useState(false)
+  const [showEditar, setShowEditar]     = useState(false)
   const [usuarioSelecionado, setUsuario] = useState(null)
   const [convidando, setConvidando]     = useState(false)
   const [showMembros, setShowMembros]   = useState(false)
@@ -474,28 +612,46 @@ function FamiliaDetailScreen({
 
       {/* Header */}
       <div className="bg-primary text-white px-4 pt-safe pb-4 shadow-md flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {/* Botão voltar */}
             <button onClick={onVoltar}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 transition-colors text-lg font-bold">
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 transition-colors text-xl font-bold flex-shrink-0">
               ‹
             </button>
-            <div>
-              <p className="text-white/60 text-xs font-medium uppercase tracking-wide leading-none mb-0.5">Família</p>
-              <h1 className="text-lg font-extrabold leading-tight">{familia.nome}</h1>
+            {/* Ícone da família */}
+            <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center text-2xl flex-shrink-0">
+              {familia.icone || '👨‍👩‍👧‍👦'}
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <SkyToggle checked={isDark} onChange={toggleTheme} />
+            <div className="min-w-0 flex-1">
+              <p className="text-white/60 text-[10px] font-medium uppercase tracking-wide leading-none mb-0.5">Família</p>
+              <h1 className="text-base font-extrabold leading-tight truncate">{familia.nome}</h1>
+            </div>
             {familia.meu_role === 'admin' && (
-              <button onClick={() => { setShowConvite(v => !v); setUsuario(null) }}
-                className="text-xs bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg font-medium transition-colors">
-                + Convidar
+              <button onClick={() => setShowEditar(true)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex-shrink-0"
+                aria-label="Editar família">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
             )}
           </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <SkyToggle checked={isDark} onChange={toggleTheme} />
+          </div>
         </div>
+
+        {/* Botão convidar */}
+        {familia.meu_role === 'admin' && (
+          <div className="flex justify-end mb-3">
+            <button onClick={() => { setShowConvite(v => !v); setUsuario(null) }}
+              className="text-xs bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg font-medium transition-colors">
+              + Convidar membro
+            </button>
+          </div>
+        )}
 
         {/* Navegação de mês */}
         <div className="flex items-center justify-between bg-white/10 rounded-2xl px-2 py-2">
@@ -701,6 +857,18 @@ function FamiliaDetailScreen({
       </button>
 
       <NovoLancamentoSheet open={showAdd} onClose={() => setShowAdd(false)} onSave={handleAddLancamento} />
+
+      <EditarFamiliaSheet
+        open={showEditar}
+        familia={familia}
+        onClose={() => setShowEditar(false)}
+        onSave={async (updates) => {
+          const r = await updateFamilia(familia.id, updates)
+          if (r?.error) addToast(r.error, 'error')
+          else addToast('Família atualizada!', 'success')
+          return r
+        }}
+      />
     </div>
   )
 }
@@ -714,7 +882,7 @@ export default function FamiliaPage({ onConviteHandled }) {
   const {
     familia, familias, trocarFamilia,
     membros, convitesPendentes, convitesEnviados, loading,
-    createFamilia, convidarMembro, cancelarConviteEnviado,
+    createFamilia, updateFamilia, convidarMembro, cancelarConviteEnviado,
     aceitarConvite, recusarConvite, sairDaFamilia, removerMembro,
   } = useFamilia()
 
@@ -761,6 +929,7 @@ export default function FamiliaPage({ onConviteHandled }) {
             if (!r?.error) voltar()
             return r
           }}
+          updateFamilia={updateFamilia}
           addToast={addToast}
         />
       ) : (
