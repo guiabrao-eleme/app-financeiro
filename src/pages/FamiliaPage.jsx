@@ -170,8 +170,10 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
     const num = parseFloat(valor.replace(',', '.'))
     if (!desc.trim() || isNaN(num) || num <= 0) return
     setSaving(true)
-    await onSave({ tipo, data_vencimento: data, descricao: desc.trim(), categoria: cat, valor: num })
-    setSaving(false); onClose()
+    const result = await onSave({ tipo, data_vencimento: data, descricao: desc.trim(), categoria: cat, valor: num })
+    setSaving(false)
+    if (result?.error) return  // mantém modal aberto se falhou
+    onClose()
   }
 
   return (
@@ -389,6 +391,18 @@ function FamiliaDetailScreen({
 
   const prevMonth = () => { if (month === 1) { setYear(y => y-1); setMonth(12) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setYear(y => y+1); setMonth(1) } else setMonth(m => m+1) }
+
+  // Wrapper: trata erro e recarrega a lista após salvar
+  const handleAddLancamento = useCallback(async (payload) => {
+    const result = await addLancamento(payload)
+    if (result?.error) {
+      addToast(result.error, 'error')
+      return result
+    }
+    // Recarrega direto do banco para garantir sincronia
+    await fetchLancamentos(year, month)
+    return result
+  }, [addLancamento, fetchLancamentos, year, month, addToast])
 
   const handleConvite = async () => {
     if (!usuarioSelecionado) return
@@ -643,7 +657,7 @@ function FamiliaDetailScreen({
         +
       </button>
 
-      <NovoLancamentoSheet open={showAdd} onClose={() => setShowAdd(false)} onSave={addLancamento} />
+      <NovoLancamentoSheet open={showAdd} onClose={() => setShowAdd(false)} onSave={handleAddLancamento} />
     </div>
   )
 }
