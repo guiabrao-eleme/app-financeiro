@@ -9,6 +9,7 @@ export function useFamilia() {
   const [familiaAtualId, setFamiliaAtualId]   = useState(null)  // id da família selecionada
   const [membros, setMembros]                 = useState([])
   const [convitesPendentes, setConvitesPendentes] = useState([])
+  const [convitesEnviados, setConvitesEnviados]   = useState([])
   const [lancamentos, setLancamentos]         = useState([])
   const [loading, setLoading]                 = useState(true)
 
@@ -23,6 +24,17 @@ export function useFamilia() {
       .eq('familia_id', familiaId)
       .order('joined_at', { ascending: true })
     setMembros(data ?? [])
+  }, [])
+
+  // ── Carrega convites enviados (pendentes) da família ──────────────────────
+  const loadConvitesEnviados = useCallback(async (familiaId) => {
+    const { data } = await supabase
+      .from('familia_convites')
+      .select('*')
+      .eq('familia_id', familiaId)
+      .eq('status', 'pendente')
+      .order('created_at', { ascending: false })
+    setConvitesEnviados(data ?? [])
   }, [])
 
   // ── Carrega tudo ──────────────────────────────────────────────────────────
@@ -77,11 +89,16 @@ export function useFamilia() {
 
   useEffect(() => { load() }, [load])
 
-  // Recarrega membros quando troca de família
+  // Recarrega membros e convites enviados quando troca de família
   useEffect(() => {
-    if (familiaAtualId) loadMembros(familiaAtualId)
-    else setMembros([])
-  }, [familiaAtualId, loadMembros])
+    if (familiaAtualId) {
+      loadMembros(familiaAtualId)
+      loadConvitesEnviados(familiaAtualId)
+    } else {
+      setMembros([])
+      setConvitesEnviados([])
+    }
+  }, [familiaAtualId, loadMembros, loadConvitesEnviados])
 
   // ── Trocar família ativa ──────────────────────────────────────────────────
   const trocarFamilia = useCallback((id) => {
@@ -162,8 +179,21 @@ export function useFamilia() {
       }, { onConflict: 'familia_id,email' })
 
     if (error) return { error: error.message }
+    // Recarrega a lista de convites enviados
+    await loadConvitesEnviados(familia.id)
     return { error: null }
-  }, [familia, user])
+  }, [familia, user, loadConvitesEnviados])
+
+  // ── Cancelar convite enviado ──────────────────────────────────────────────
+  const cancelarConviteEnviado = useCallback(async (conviteId) => {
+    const { error } = await supabase
+      .from('familia_convites')
+      .update({ status: 'cancelado' })
+      .eq('id', conviteId)
+    if (error) return { error: error.message }
+    setConvitesEnviados(prev => prev.filter(c => c.id !== conviteId))
+    return { error: null }
+  }, [])
 
   // ── Aceitar convite ───────────────────────────────────────────────────────
   const aceitarConvite = useCallback(async (convite) => {
@@ -279,9 +309,9 @@ export function useFamilia() {
 
   return {
     familia, familias, familiaAtualId, trocarFamilia,
-    membros, convitePendente, convitesPendentes, lancamentos, loading,
+    membros, convitePendente, convitesPendentes, convitesEnviados, lancamentos, loading,
     fetchLancamentos,
-    createFamilia, convidarMembro,
+    createFamilia, convidarMembro, cancelarConviteEnviado,
     aceitarConvite, recusarConvite,
     sairDaFamilia, removerMembro,
     addLancamento, updateLancamento, deleteLancamento, togglePago,

@@ -25,7 +25,18 @@
       "Bash(git commit -m 'fix: safe area iPhone, botão + acima do nav, favicon correto, avatar por usuário *)",
       "Bash(git commit -m 'feat: categorias 100% dinâmicas por usuário \\(Supabase\\) *)",
       "Bash(git commit -m 'feat: avatar sincronizado via Supabase Storage + user_metadata *)",
-      "Bash(git commit -m 'fix: avatar persiste após refresh via refreshSession\\(\\) *)"
+      "Bash(git commit -m 'fix: avatar persiste após refresh via refreshSession\\(\\) *)",
+      "Bash(git commit -m 'fix: fallback robusto no insert — funciona sem migração SQL das colunas recorrentes *)",
+      "Bash(git commit -m 'fix: fallback em 3 níveis + mostra erro real do Supabase no toast *)",
+      "Bash(git commit -m 'fix: adiciona data_registro \\(NOT NULL\\) de volta em todos os inserts *)",
+      "Bash(git commit -m 'fix: adiciona valor_total \\(NOT NULL\\) de volta em todos os inserts *)",
+      "Bash(git commit -m 'fix: inclui parcela_atual e total_parcelas \\(NOT NULL\\) em todos os inserts *)",
+      "Bash(npm run *)",
+      "Bash(cat vite.config.js)",
+      "Bash(cat vite.config.ts)",
+      "Bash(npx web-push *)",
+      "Bash(npx vercel *)",
+      "Bash(git commit *)"
     ]
   }
 }

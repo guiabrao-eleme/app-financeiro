@@ -294,8 +294,8 @@ export default function FamiliaPage({ onConviteHandled }) {
   const { addToast, ToastContainer } = useToast()
   const {
     familia, familias, familiaAtualId, trocarFamilia,
-    membros, convitePendente, convitesPendentes, lancamentos, loading,
-    fetchLancamentos, createFamilia, convidarMembro,
+    membros, convitePendente, convitesPendentes, convitesEnviados, lancamentos, loading,
+    fetchLancamentos, createFamilia, convidarMembro, cancelarConviteEnviado,
     aceitarConvite, recusarConvite, sairDaFamilia, removerMembro,
     addLancamento, deleteLancamento, togglePago,
   } = useFamilia()
@@ -520,6 +520,40 @@ export default function FamiliaPage({ onConviteHandled }) {
                 onSelect={u => setUsuarioSelecionado(u)}
               />
             )}
+          </div>
+        )}
+
+        {/* ── Convites enviados aguardando resposta (admin) ── */}
+        {familia.meu_role === 'admin' && convitesEnviados.length > 0 && (
+          <div className="mx-4 mt-4 bg-white dark:bg-slate-800 rounded-2xl border border-amber-100 dark:border-amber-900/40 overflow-hidden">
+            <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/40 flex items-center gap-2">
+              <span className="text-base">⏳</span>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex-1">
+                Convites pendentes
+              </p>
+              <span className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 rounded-full">
+                {convitesEnviados.length}
+              </span>
+            </div>
+            {convitesEnviados.map(c => (
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50 dark:border-slate-700 last:border-0">
+                <Avatar nome={c.email} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{c.email}</p>
+                  <p className="text-xs text-amber-500 dark:text-amber-400">Aguardando resposta</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const r = await cancelarConviteEnviado(c.id)
+                    if (r?.error) addToast(r.error, 'error')
+                    else addToast('Convite cancelado.', 'info')
+                  }}
+                  className="text-xs text-red-400 hover:text-red-500 font-medium px-2 py-1.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
