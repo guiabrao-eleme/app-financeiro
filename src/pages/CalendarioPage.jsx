@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { fetchFamiliaLancamentos } from '../utils/familiaLancamentos'
 import { useTheme } from '../contexts/ThemeContext'
 import { formatCurrency } from '../utils/format'
 import { useCategories, getCatMeta } from '../hooks/useCategories'
@@ -93,14 +94,26 @@ export default function CalendarioPage() {
     const daysInMonth = new Date(year, month, 0).getDate()
     const start = `${year}-${String(month).padStart(2,'0')}-01`
     const end   = `${year}-${String(month).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`
-    const { data } = await supabase
+
+    // Pessoal
+    const { data: personal } = await supabase
       .from('lancamentos')
       .select('*')
       .eq('user_id', user.id)
       .gte('data_vencimento', start)
       .lte('data_vencimento', end)
       .order('data_vencimento', { ascending: true })
-    setItems(data ?? [])
+
+    // Família
+    const family = await fetchFamiliaLancamentos(user.id, '*', start, end)
+
+    // Mescla e ordena por data
+    const merged = [
+      ...(personal ?? []).map(l => ({ ...l, _origem: 'pessoal' })),
+      ...family,
+    ].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
+
+    setItems(merged)
     setLoading(false)
   }, [user.id, year, month])
 
@@ -408,15 +421,20 @@ export default function CalendarioPage() {
             ) : (
               <div className="space-y-2">
                 {selectedItems.map(item => {
-                  const meta     = getCatMeta(item.categoria, categories)
-                  const cartao   = cartoes?.find(c => c.id === item.cartao_id) ?? null
+                  const meta       = getCatMeta(item.categoria, categories)
+                  const cartao     = cartoes?.find(c => c.id === item.cartao_id) ?? null
                   const cartaoMeta = cartao ? getCorMeta(cartao.cor) : null
-                  const isEntr   = item.tipo === 'Entrada'
+                  const isEntr     = item.tipo === 'Entrada'
+                  const isFamilia  = item._origem === 'familia'
+                  const itemKey    = isFamilia ? `fam_${item.id}` : item.id
 
                   return (
                     <div
-                      key={item.id}
-                      className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-2xl px-3 py-3 border border-slate-100 dark:border-slate-700"
+                      key={itemKey}
+                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 border
+                        ${isFamilia
+                          ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/40'
+                          : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}
                     >
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${meta.color}`}>
                         {meta.icon}
@@ -427,6 +445,11 @@ export default function CalendarioPage() {
                           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
                             {item.descricao}
                           </p>
+                          {isFamilia && (
+                            <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0">
+                              👨‍👩‍👧‍👦 {item._familia_nome}
+                            </span>
+                          )}
                           {item.tipo_repeticao === 'recorrente' && (
                             <span className="text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-500 font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0">
                               🔄
@@ -467,13 +490,18 @@ export default function CalendarioPage() {
             </p>
             <div className="space-y-2">
               {items.map(item => {
-                const meta   = getCatMeta(item.categoria, categories)
-                const isEntr = item.tipo === 'Entrada'
-                const day    = parseInt(item.data_vencimento.split('-')[2])
+                const meta      = getCatMeta(item.categoria, categories)
+                const isEntr    = item.tipo === 'Entrada'
+                const isFamilia = item._origem === 'familia'
+                const day       = parseInt(item.data_vencimento.split('-')[2])
+                const itemKey   = isFamilia ? `fam_${item.id}` : item.id
                 return (
                   <div
-                    key={item.id}
-                    className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-2xl px-3 py-3 border border-slate-100 dark:border-slate-700"
+                    key={itemKey}
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-3 border
+                      ${isFamilia
+                        ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/40'
+                        : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}
                   >
                     <div className="flex-shrink-0 w-9 text-center">
                       <p className="text-[9px] text-slate-400 dark:text-slate-500 leading-none">dia</p>
@@ -484,7 +512,14 @@ export default function CalendarioPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{item.descricao}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{item.categoria}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <p className="text-xs text-slate-400 dark:text-slate-500">{item.categoria}</p>
+                        {isFamilia && (
+                          <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded-full">
+                            👨‍👩‍👧‍👦 {item._familia_nome}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <p className={`text-sm font-bold flex-shrink-0 ${isEntr ? 'text-emerald-500' : 'text-red-500'}`}>
                       {isEntr ? '+' : '-'}{formatCurrency(item.valor)}

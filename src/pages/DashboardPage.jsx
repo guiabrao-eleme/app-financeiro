@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { getMonthRange } from '../utils/format'
+import { fetchFamiliaLancamentos } from '../utils/familiaLancamentos'
 import Header from '../components/layout/Header'
 import SummaryCards from '../components/dashboard/SummaryCards'
 import CategoryChart from '../components/dashboard/CategoryChart'
@@ -30,13 +31,19 @@ export default function DashboardPage({ showModal, onOpenPerfil }) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const { start, end } = getMonthRange(year, month)
-    const { data, error } = await supabase
+
+    // Pessoal
+    const { data: personal } = await supabase
       .from('lancamentos')
       .select('tipo, categoria, valor')
       .eq('user_id', user.id)
       .gte('data_vencimento', start)
       .lte('data_vencimento', end)
-    if (!error) setLancamentos(data ?? [])
+
+    // Família (mesclado automaticamente)
+    const family = await fetchFamiliaLancamentos(user.id, 'tipo, categoria, valor', start, end)
+
+    setLancamentos([...(personal ?? []), ...family])
     setLoading(false)
   }, [year, month, user.id])
 

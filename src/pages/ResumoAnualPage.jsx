@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { fetchFamiliaLancamentos } from '../utils/familiaLancamentos'
 import { useTheme } from '../contexts/ThemeContext'
 import SkyToggle from '../components/ui/SkyToggle'
 import { formatCurrency } from '../utils/format'
@@ -344,19 +345,29 @@ export default function ResumoAnualPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
 
-    const { data, error } = await supabase
+    const start = `${year}-01-01`
+    const end   = `${year}-12-31`
+
+    // Pessoal
+    const { data: personal } = await supabase
       .from('lancamentos')
       .select('tipo, categoria, valor, data_vencimento')
       .eq('user_id', user.id)
-      .gte('data_vencimento', `${year}-01-01`)
-      .lte('data_vencimento', `${year}-12-31`)
+      .gte('data_vencimento', start)
+      .lte('data_vencimento', end)
 
-    if (!error && data) {
-      // Agrupa por mês
+    // Família
+    const family = await fetchFamiliaLancamentos(
+      user.id, 'tipo, categoria, valor, data_vencimento', start, end
+    )
+
+    const allData = [...(personal ?? []), ...family]
+
+    if (allData.length > 0) {
       const byMonth = Array.from({ length: 12 }, () => ({ entradas: 0, saidas: 0 }))
       const byCat = {}
 
-      data.forEach(l => {
+      allData.forEach(l => {
         const m = parseInt(l.data_vencimento.split('-')[1]) - 1
         const v = Number(l.valor)
         if (!byCat[l.categoria]) byCat[l.categoria] = { entradas: 0, saidas: 0 }
