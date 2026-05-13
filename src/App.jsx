@@ -20,6 +20,14 @@ function AppRouter() {
   const [appPage, setAppPage]       = useState('dashboard')
   const [showModal, setShowModal]   = useState(false)
   const [familiaNotif, setFamiliaNotif] = useState(false)
+  // ID da família para abrir direto no detalhe (deep-link de Registros)
+  const [familiaInicial, setFamiliaInicial] = useState(null)
+
+  // Navega para a aba Família já abrindo o detalhe de uma família específica
+  const abrirFamilia = (familiaId) => {
+    setFamiliaInicial(familiaId)
+    setAppPage('familia')
+  }
 
   // Verifica convite pendente para mostrar badge na aba Família
   useEffect(() => {
@@ -61,15 +69,17 @@ function AppRouter() {
           />
         )
       case 'registros':
-        return <RegistrosPage showModal={showModal} />
+        return <RegistrosPage showModal={showModal} onOpenFamilia={abrirFamilia} />
       case 'anual':
-        return <ResumoAnualPage />
+        return <ResumoAnualPage onOpenFamilia={abrirFamilia} />
       case 'calendario':
-        return <CalendarioPage />
+        return <CalendarioPage onOpenFamilia={abrirFamilia} />
       case 'familia':
         return (
           <FamiliaPage
             onConviteHandled={() => setFamiliaNotif(false)}
+            initialDetalheId={familiaInicial}
+            onDetalheClosed={() => setFamiliaInicial(null)}
           />
         )
       case 'observacoes':

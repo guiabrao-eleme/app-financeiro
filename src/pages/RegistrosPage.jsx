@@ -49,7 +49,7 @@ function ListSkeleton() {
   )
 }
 
-function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onToggleSelect, categories, cartoes }) {
+function LancamentoItem({ item, onEdit, onDelete, onOpenFamilia, selectionMode, selected, onToggleSelect, categories, cartoes }) {
   const meta = getCatMeta(item.categoria, categories)
   const cartao = cartoes?.find(c => c.id === item.cartao_id) ?? null
   const cartaoMeta = cartao ? getCorMeta(cartao.cor) : null
@@ -58,15 +58,21 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
   const isParcelado  = item.tipo_repeticao === 'parcelado'  && item.total_parcelas > 1
   const isFamilia    = item._origem === 'familia'
 
+  // Handler de clique no row: navega para a família se for item de família
+  const handleRowClick = () => {
+    if (selectionMode && !isFamilia) return onToggleSelect(item.id)
+    if (isFamilia && onOpenFamilia) onOpenFamilia(item.familia_id)
+  }
+
   return (
     <div
       className={`flex items-center gap-3 py-3 px-4 border-b transition-colors
         ${isFamilia
-          ? 'bg-indigo-50/40 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30'
+          ? 'bg-indigo-50/40 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30 cursor-pointer active:bg-indigo-100/60 dark:active:bg-indigo-900/30'
           : 'bg-white dark:bg-slate-800 border-slate-50 dark:border-slate-700'}
         ${selectionMode && !isFamilia ? 'cursor-pointer active:bg-slate-50 dark:active:bg-slate-700' : ''}
         ${selected ? 'bg-primary/5 dark:bg-primary/20 border-primary/10' : ''}`}
-      onClick={selectionMode && !isFamilia ? () => onToggleSelect(item.id) : undefined}
+      onClick={handleRowClick}
     >
       {/* Checkbox ou ícone */}
       {selectionMode && !isFamilia ? (
@@ -159,12 +165,11 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
         </>
       )}
 
-      {/* Indicador read-only para itens de família */}
+      {/* Indicador "abrir na Família" — itens de família são clicáveis */}
       {!selectionMode && isFamilia && (
-        <div className="w-8 flex-shrink-0 flex items-center justify-center text-indigo-400 dark:text-indigo-500" title="Edite pela aba Família">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeLinecap="round" strokeLinejoin="round"/>
+        <div className="w-8 flex-shrink-0 flex items-center justify-center text-indigo-400 dark:text-indigo-500" title="Abrir na aba Família">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-4 h-4">
+            <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
       )}
@@ -172,7 +177,7 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
   )
 }
 
-export default function RegistrosPage({ showModal }) {
+export default function RegistrosPage({ showModal, onOpenFamilia }) {
   const { user } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const { addToast, ToastContainer } = useToast()
@@ -776,6 +781,7 @@ export default function RegistrosPage({ showModal }) {
                 item={item}
                 onEdit={handleEditClick}
                 onDelete={handleDeleteClick}
+                onOpenFamilia={onOpenFamilia}
                 selectionMode={selectionMode}
                 selected={selectedIds.has(item.id)}
                 onToggleSelect={toggleSelect}

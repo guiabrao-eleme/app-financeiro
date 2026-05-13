@@ -348,19 +348,20 @@ function FamiliaListScreen({
   familias, convitesPendentes, loading,
   onEntrar, onCriar, onAceitar, onRecusar, isDark, toggleTheme,
 }) {
+  const { user } = useAuth()
   const [showCriar, setShowCriar]     = useState(false)
   const [actionLoading, setActionLoad] = useState(null) // id do convite em loading
   const [resumos, setResumos]          = useState({}) // { familiaId: { receber, pagar } }
 
-  // Carrega resumos do mês atual para todas as famílias
+  // Carrega resumos do mês atual para todas as famílias (só a fatia do usuário)
   useEffect(() => {
-    if (!familias?.length) { setResumos({}); return }
+    if (!familias?.length || !user?.id) { setResumos({}); return }
     const now = new Date()
     const familyIds = familias.map(f => f.id)
-    fetchResumosFamilias(familyIds, now.getFullYear(), now.getMonth() + 1)
+    fetchResumosFamilias(familyIds, now.getFullYear(), now.getMonth() + 1, user.id)
       .then(setResumos)
       .catch(() => setResumos({}))
-  }, [familias])
+  }, [familias, user?.id])
 
   const roleLabel = (role) => role === 'admin' ? 'Admin' : 'Membro'
   const roleColor = (role) => role === 'admin'
@@ -1247,7 +1248,7 @@ function FamiliaDetailScreen({
 // ══════════════════════════════════════════════════════════════════════════════
 // COMPONENTE RAIZ
 // ══════════════════════════════════════════════════════════════════════════════
-export default function FamiliaPage({ onConviteHandled }) {
+export default function FamiliaPage({ onConviteHandled, initialDetalheId, onDetalheClosed }) {
   const { isDark, toggleTheme } = useTheme()
   const { addToast, ToastContainer } = useToast()
   const {
@@ -1260,6 +1261,14 @@ export default function FamiliaPage({ onConviteHandled }) {
   // null = lista, 'uuid' = detalhe da família selecionada
   const [detalheId, setDetalheId] = useState(null)
 
+  // Deep-link: ao receber initialDetalheId, abre diretamente o detalhe
+  useEffect(() => {
+    if (initialDetalheId && familias.some(f => f.id === initialDetalheId)) {
+      trocarFamilia(initialDetalheId)
+      setDetalheId(initialDetalheId)
+    }
+  }, [initialDetalheId, familias, trocarFamilia])
+
   // Entra numa família
   const entrar = (id) => {
     trocarFamilia(id)
@@ -1269,6 +1278,7 @@ export default function FamiliaPage({ onConviteHandled }) {
   // Volta para a lista
   const voltar = () => {
     setDetalheId(null)
+    onDetalheClosed?.()
   }
 
   if (loading) {

@@ -69,7 +69,7 @@ function ExportSheet({ open, onClose, onExportAll, onExportNotify, loading }) {
 }
 
 // ─── Página de calendário ─────────────────────────────────────────────────────
-export default function CalendarioPage() {
+export default function CalendarioPage({ onOpenFamilia }) {
   const { user } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const { categories } = useCategories()
@@ -431,9 +431,10 @@ export default function CalendarioPage() {
                   return (
                     <div
                       key={itemKey}
+                      onClick={isFamilia && onOpenFamilia ? () => onOpenFamilia(item.familia_id) : undefined}
                       className={`flex items-center gap-3 rounded-2xl px-3 py-3 border
                         ${isFamilia
-                          ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/40'
+                          ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/40 cursor-pointer active:bg-indigo-100/60 dark:active:bg-indigo-900/30'
                           : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}
                     >
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${meta.color}`}>
@@ -501,9 +502,10 @@ export default function CalendarioPage() {
                 return (
                   <div
                     key={itemKey}
+                    onClick={isFamilia && onOpenFamilia ? () => onOpenFamilia(item.familia_id) : undefined}
                     className={`flex items-center gap-3 rounded-2xl px-3 py-3 border
                       ${isFamilia
-                        ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/40'
+                        ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/40 cursor-pointer active:bg-indigo-100/60 dark:active:bg-indigo-900/30'
                         : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}
                   >
                     <div className="flex-shrink-0 w-9 text-center">
