@@ -370,39 +370,64 @@ function FamiliaListScreen({
 // TELA 2 — Detalhe da família selecionada
 // ══════════════════════════════════════════════════════════════════════════════
 function FamiliaDetailScreen({
-  familia, membros, convitesEnviados, lancamentos,
+  familia, membros, convitesEnviados,
   isDark, toggleTheme, onVoltar,
   convidarMembro, cancelarConviteEnviado,
   removerMembro, sairDaFamilia,
   addLancamento, deleteLancamento, togglePago,
-  fetchLancamentos, addToast,
+  addToast,
 }) {
   const { user } = useAuth()
   const now = new Date()
   const [year, setYear]       = useState(now.getFullYear())
   const [month, setMonth]     = useState(now.getMonth() + 1)
+  // Estado local de lançamentos — fetch direto com familia.id, sem depender do hook
+  const [lancamentos, setLancamentos] = useState([])
   const [showAdd, setShowAdd]           = useState(false)
   const [showConvite, setShowConvite]   = useState(false)
   const [usuarioSelecionado, setUsuario] = useState(null)
   const [convidando, setConvidando]     = useState(false)
   const [showMembros, setShowMembros]   = useState(false)
 
-  useEffect(() => { fetchLancamentos(year, month) }, [year, month, fetchLancamentos])
+  // Fetch direto — usa familia.id da prop, nunca depende de familiaAtualId
+  const fetchData = useCallback(async () => {
+    if (!familia?.id) return
+    const pad  = n => String(n).padStart(2, '0')
+    const last = new Date(year, month, 0).getDate()
+    const { data } = await supabase
+      .from('lancamentos_familia')
+      .select('*')
+      .eq('familia_id', familia.id)
+      .gte('data_vencimento', `${year}-${pad(month)}-01`)
+      .lte('data_vencimento', `${year}-${pad(month)}-${pad(last)}`)
+      .order('data_vencimento', { ascending: true })
+    setLancamentos(data ?? [])
+  }, [familia?.id, year, month])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   const prevMonth = () => { if (month === 1) { setYear(y => y-1); setMonth(12) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setYear(y => y+1); setMonth(1) } else setMonth(m => m+1) }
 
-  // Wrapper: trata erro e recarrega a lista após salvar
+  // Wrapper: insere e recarrega lista local
   const handleAddLancamento = useCallback(async (payload) => {
-    const result = await addLancamento(payload)
-    if (result?.error) {
-      addToast(result.error, 'error')
-      return result
-    }
-    // Recarrega direto do banco para garantir sincronia
-    await fetchLancamentos(year, month)
-    return result
-  }, [addLancamento, fetchLancamentos, year, month, addToast])
+    if (!familia?.id) { addToast('Família não encontrada.', 'error'); return { error: 'sem família' } }
+    const { data, error } = await supabase
+      .from('lancamentos_familia')
+      .insert({
+        ...payload,
+        familia_id:      familia.id,
+        criado_por:      user.id,
+        criado_por_nome: user.user_metadata?.full_name || user.email.split('@')[0],
+      })
+      .select()
+      .single()
+    if (error) { addToast(error.message, 'error'); return { error: error.message } }
+    setLancamentos(prev =>
+      [...prev, data].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
+    )
+    return { error: null }
+  }, [familia?.id, user, addToast])
 
   const handleConvite = async () => {
     if (!usuarioSelecionado) return
@@ -413,6 +438,24 @@ function FamiliaDetailScreen({
     addToast(`Convite enviado para ${usuarioSelecionado.nome}!`, 'success')
     setUsuario(null); setShowConvite(false)
   }
+
+  const handleDelete = useCallback(async (id) => {
+    const { error } = await supabase.from('lancamentos_familia').delete().eq('id', id)
+    if (error) { addToast(error.message, 'error'); return }
+    setLancamentos(prev => prev.filter(l => l.id !== id))
+  }, [addToast])
+
+  const handleToggle = useCallback(async (id, pago) => {
+    const pago_por_nome = pago
+      ? (user.user_metadata?.full_name || user.email.split('@')[0])
+      : null
+    const { error } = await supabase
+      .from('lancamentos_familia')
+      .update({ pago, pago_por_nome })
+      .eq('id', id)
+    if (error) { addToast(error.message, 'error'); return }
+    setLancamentos(prev => prev.map(l => l.id === id ? { ...l, pago, pago_por_nome } : l))
+  }, [user, addToast])
 
   const handleSair = async () => {
     if (!window.confirm('Sair da família? Seus lançamentos compartilhados permanecem.')) return
@@ -609,7 +652,7 @@ function FamiliaDetailScreen({
                     className={`bg-white dark:bg-slate-800 rounded-2xl border transition-all
                       ${item.pago ? 'border-emerald-100 dark:border-emerald-900/30 opacity-70' : 'border-slate-100 dark:border-slate-700'}`}>
                     <div className="flex items-center gap-3 px-3 py-3">
-                      <button onClick={() => togglePago(item.id, !item.pago)}
+                      <button onClick={() => handleToggle(item.id, !item.pago)}
                         className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
                           ${item.pago ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-500'}`}>
                         {item.pago && (
@@ -635,7 +678,7 @@ function FamiliaDetailScreen({
                       <p className={`text-sm font-bold flex-shrink-0 ${isEntr ? 'text-emerald-500' : 'text-red-500'}`}>
                         {isEntr ? '+' : '-'}{formatCurrency(item.valor)}
                       </p>
-                      <button onClick={() => deleteLancamento(item.id)}
+                      <button onClick={() => handleDelete(item.id)}
                         className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
                           <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -670,10 +713,9 @@ export default function FamiliaPage({ onConviteHandled }) {
   const { addToast, ToastContainer } = useToast()
   const {
     familia, familias, trocarFamilia,
-    membros, convitesPendentes, convitesEnviados, lancamentos, loading,
-    fetchLancamentos, createFamilia, convidarMembro, cancelarConviteEnviado,
+    membros, convitesPendentes, convitesEnviados, loading,
+    createFamilia, convidarMembro, cancelarConviteEnviado,
     aceitarConvite, recusarConvite, sairDaFamilia, removerMembro,
-    addLancamento, deleteLancamento, togglePago,
   } = useFamilia()
 
   // null = lista, 'uuid' = detalhe da família selecionada
@@ -708,7 +750,6 @@ export default function FamiliaPage({ onConviteHandled }) {
           familia={familia}
           membros={membros}
           convitesEnviados={convitesEnviados}
-          lancamentos={lancamentos}
           isDark={isDark}
           toggleTheme={toggleTheme}
           onVoltar={voltar}
@@ -720,10 +761,6 @@ export default function FamiliaPage({ onConviteHandled }) {
             if (!r?.error) voltar()
             return r
           }}
-          addLancamento={addLancamento}
-          deleteLancamento={deleteLancamento}
-          togglePago={togglePago}
-          fetchLancamentos={fetchLancamentos}
           addToast={addToast}
         />
       ) : (
