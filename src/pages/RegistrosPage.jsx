@@ -13,6 +13,7 @@ import { downloadCSV, formatCSVCurrency } from '../utils/csv'
 import { useCategories, getCatMeta } from '../hooks/useCategories'
 import { useCartoes, getCorMeta } from '../hooks/useCartoes'
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar'
+import { fetchFamiliaLancamentos } from '../utils/familiaLancamentos'
 
 const SORT_OPTIONS = [
   { id: 'data_desc',  label: '↓ Mais novo' },
@@ -55,16 +56,20 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
   const isEntrada = item.tipo === 'Entrada'
   const isRecorrente = item.tipo_repeticao === 'recorrente' && item.grupo_recorrente
   const isParcelado  = item.tipo_repeticao === 'parcelado'  && item.total_parcelas > 1
+  const isFamilia    = item._origem === 'familia'
 
   return (
     <div
-      className={`flex items-center gap-3 py-3 px-4 bg-white dark:bg-slate-800 border-b border-slate-50 dark:border-slate-700 transition-colors
-        ${selectionMode ? 'cursor-pointer active:bg-slate-50 dark:active:bg-slate-700' : ''}
+      className={`flex items-center gap-3 py-3 px-4 border-b transition-colors
+        ${isFamilia
+          ? 'bg-indigo-50/40 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30'
+          : 'bg-white dark:bg-slate-800 border-slate-50 dark:border-slate-700'}
+        ${selectionMode && !isFamilia ? 'cursor-pointer active:bg-slate-50 dark:active:bg-slate-700' : ''}
         ${selected ? 'bg-primary/5 dark:bg-primary/20 border-primary/10' : ''}`}
-      onClick={selectionMode ? () => onToggleSelect(item.id) : undefined}
+      onClick={selectionMode && !isFamilia ? () => onToggleSelect(item.id) : undefined}
     >
       {/* Checkbox ou ícone */}
-      {selectionMode ? (
+      {selectionMode && !isFamilia ? (
         <div
           className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
             ${selected ? 'bg-primary border-primary' : 'border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700'}`}
@@ -84,6 +89,12 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{item.descricao}</p>
+          {/* Badge família */}
+          {isFamilia && (
+            <span className="flex-shrink-0 text-[10px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded-full">
+              👨‍👩‍👧‍👦 {item._familia_nome}
+            </span>
+          )}
           {/* Badge recorrente */}
           {isRecorrente && (
             <span className="flex-shrink-0 text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-500 font-semibold px-1.5 py-0.5 rounded-full">
@@ -119,7 +130,8 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
         {isEntrada ? '+' : '-'}{formatCurrency(item.valor)}
       </p>
 
-      {!selectionMode && (
+      {/* Botões edição (não aparecem em modo seleção nem em itens de família) */}
+      {!selectionMode && !isFamilia && (
         <>
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(item) }}
@@ -142,6 +154,16 @@ function LancamentoItem({ item, onEdit, onDelete, selectionMode, selected, onTog
             </svg>
           </button>
         </>
+      )}
+
+      {/* Indicador read-only para itens de família */}
+      {!selectionMode && isFamilia && (
+        <div className="w-8 flex-shrink-0 flex items-center justify-center text-indigo-400 dark:text-indigo-500" title="Edite pela aba Família">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
       )}
     </div>
   )
@@ -210,6 +232,8 @@ export default function RegistrosPage({ showModal }) {
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
+
+    // Lançamentos pessoais
     let query = supabase
       .from('lancamentos')
       .select('*')
@@ -217,13 +241,26 @@ export default function RegistrosPage({ showModal }) {
       .order('data_vencimento', { ascending: false })
       .order('created_at', { ascending: false })
 
+    let dateStart = null, dateEnd = null
     if (!allMonths) {
       const { start, end } = getMonthRange(year, month)
+      dateStart = start
+      dateEnd = end
       query = query.gte('data_vencimento', start).lte('data_vencimento', end)
     }
 
-    const { data, error } = await query
-    if (!error) setAllItems(data ?? [])
+    const [{ data: personal, error }, family] = await Promise.all([
+      query,
+      fetchFamiliaLancamentos(user.id, '*', dateStart, dateEnd),
+    ])
+
+    if (!error) {
+      const merged = [
+        ...(personal ?? []).map(l => ({ ...l, _origem: 'pessoal' })),
+        ...family,
+      ]
+      setAllItems(merged)
+    }
     setLoading(false)
   }, [user.id, year, month, allMonths])
 
@@ -474,13 +511,16 @@ export default function RegistrosPage({ showModal }) {
   }, [scopeTarget, softDelete, softDeleteGroup])
 
   // Selecionar / desselecionar todos os visíveis
-  const allVisibleSelected = visible.length > 0 && visible.every(i => selectedIds.has(i.id))
+  // "Selecionar todos" considera apenas itens pessoais (família é read-only)
+  const visiveisSelecionaveis = visible.filter(i => i._origem !== 'familia')
+  const allVisibleSelected = visiveisSelecionaveis.length > 0 && visiveisSelecionaveis.every(i => selectedIds.has(i.id))
 
   const toggleSelectAll = () => {
     if (allVisibleSelected) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(visible.map(i => i.id)))
+      // Exclui itens de família (read-only) da seleção em massa
+      setSelectedIds(new Set(visible.filter(i => i._origem !== 'familia').map(i => i.id)))
     }
   }
 
@@ -729,7 +769,7 @@ export default function RegistrosPage({ showModal }) {
           <>
             {visible.map(item => (
               <LancamentoItem
-                key={item.id}
+                key={item._origem === 'familia' ? `fam_${item.id}` : item.id}
                 item={item}
                 onEdit={handleEditClick}
                 onDelete={handleDeleteClick}
