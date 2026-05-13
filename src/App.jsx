@@ -101,8 +101,10 @@ function AppRouter() {
         />
       )}
 
-      {/* Botão flutuante + — oculto na aba Notas e Perfil */}
-      {appPage !== 'observacoes' && appPage !== 'perfil' && (
+      {/* Botão flutuante + — oculto na aba Notas, Perfil e Família
+          (a Família tem seu próprio botão + dentro do detalhe, que abre o
+          formulário de família com divisão entre membros) */}
+      {appPage !== 'observacoes' && appPage !== 'perfil' && appPage !== 'familia' && (
         <button
           onClick={() => setShowModal(true)}
           className="fixed w-14 h-14 bg-primary text-white rounded-full shadow-lg
