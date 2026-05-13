@@ -143,11 +143,13 @@ function EditarFamiliaSheet({ open, familia, onClose, onSave }) {
   const [nome, setNome]     = useState('')
   const [icone, setIcone]   = useState('👨‍👩‍👧‍👦')
   const [saving, setSaving] = useState(false)
+  const [minimized, setMinimized] = useState(false)
 
   useEffect(() => {
     if (open && familia) {
       setNome(familia.nome ?? '')
       setIcone(familia.icone ?? '👨‍👩‍👧‍👦')
+      setMinimized(false)
     }
   }, [open, familia])
 
@@ -163,11 +165,29 @@ function EditarFamiliaSheet({ open, familia, onClose, onSave }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[90dvh] overflow-y-auto">
-        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
-        <div className="px-4 pb-6 space-y-4">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Editar família</h3>
+      {!minimized && (
+        <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
+      )}
+      <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe shadow-2xl transition-all duration-300
+        ${minimized ? 'max-h-[4.5rem] overflow-hidden' : 'max-h-[90dvh] overflow-y-auto'}`}>
+        <button type="button" onClick={() => setMinimized(v => !v)}
+          className="w-full flex flex-col items-center pt-3 pb-2 active:bg-slate-50 dark:active:bg-slate-700/40"
+          aria-label={minimized ? 'Expandir' : 'Minimizar'}>
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-500 rounded-full" />
+          {minimized && (
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
+              Editar família · toque para expandir
+            </p>
+          )}
+        </button>
+        {!minimized && (
+        <div className="px-4 pb-10 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex-1">Editar família</h3>
+            <button type="button" onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-lg leading-none flex-shrink-0"
+              aria-label="Fechar">×</button>
+          </div>
 
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0">
@@ -190,7 +210,10 @@ function EditarFamiliaSheet({ open, familia, onClose, onSave }) {
             className="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
             {saving ? 'Salvando...' : 'Salvar alterações'}
           </button>
+          {/* Espaço extra pra bottom nav não colar */}
+          <div className="h-16" />
         </div>
+        )}
       </div>
     </>
   )
@@ -266,9 +289,14 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
   const [cat, setCat]       = useState('Outros')
   const [valor, setValor]   = useState('')
   const [saving, setSaving] = useState(false)
+  const [minimized, setMinimized] = useState(false)
 
   useEffect(() => {
-    if (open) { setTipo('Saída'); setDesc(''); setValor(''); setData(new Date().toISOString().split('T')[0]); setCat('Outros') }
+    if (open) {
+      setTipo('Saída'); setDesc(''); setValor('')
+      setData(new Date().toISOString().split('T')[0]); setCat('Outros')
+      setMinimized(false)
+    }
   }, [open])
 
   if (!open) return null
@@ -285,11 +313,29 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
-        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
-        <div className="px-4 pb-6 space-y-4">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Nova conta da família</h3>
+      {!minimized && (
+        <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
+      )}
+      <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe shadow-2xl transition-all duration-300
+        ${minimized ? 'max-h-[4.5rem] overflow-hidden' : 'max-h-[90dvh] overflow-y-auto'}`}>
+        <button type="button" onClick={() => setMinimized(v => !v)}
+          className="w-full flex flex-col items-center pt-3 pb-2 active:bg-slate-50 dark:active:bg-slate-700/40"
+          aria-label={minimized ? 'Expandir' : 'Minimizar'}>
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-500 rounded-full" />
+          {minimized && (
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
+              Nova conta · toque para expandir
+            </p>
+          )}
+        </button>
+        {!minimized && (
+        <div className="px-4 pb-10 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex-1">Nova conta da família</h3>
+            <button type="button" onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-lg leading-none flex-shrink-0"
+              aria-label="Fechar">×</button>
+          </div>
           <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600">
             {['Saída','Entrada'].map(t => (
               <button key={t} type="button" onClick={() => setTipo(t)}
@@ -335,7 +381,10 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
             className="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
             {saving ? 'Salvando...' : 'Adicionar'}
           </button>
+          {/* Espaço extra pra bottom nav não colar */}
+          <div className="h-16" />
         </div>
+        )}
       </div>
     </>
   )
@@ -505,11 +554,66 @@ function FamiliaListScreen({
   )
 }
 
+// ─── Helper: auto-balanceia divisão quando muda uma linha ─────────────────────
+function autoBalanceDivisao(linhas, idxMudado, novoValor) {
+  const v = Math.max(0, Math.min(100, Number(novoValor) || 0))
+  const atualizado = [...linhas]
+  atualizado[idxMudado] = { ...atualizado[idxMudado], percentual: v }
+  const restante = +(100 - v).toFixed(2)
+  const outros = atualizado.filter((_, i) => i !== idxMudado)
+
+  if (outros.length === 0) return atualizado
+  if (outros.length === 1) {
+    // Apenas 1 outro membro — leva tudo o restante
+    atualizado.forEach((l, i) => {
+      if (i !== idxMudado) atualizado[i] = { ...l, percentual: Math.max(0, restante) }
+    })
+    return atualizado
+  }
+
+  // 2+ outros membros — distribui proporcionalmente ao que já têm
+  const somaOutros = outros.reduce((s, l) => s + l.percentual, 0)
+  if (somaOutros > 0) {
+    let acumulado = 0
+    let ultimoIdx = -1
+    atualizado.forEach((l, i) => {
+      if (i === idxMudado) return
+      ultimoIdx = i
+      const proporcao = l.percentual / somaOutros
+      const novo = +(Math.max(0, restante) * proporcao).toFixed(2)
+      atualizado[i] = { ...l, percentual: novo }
+      acumulado += novo
+    })
+    // Ajusta o último para fechar 100 exato
+    if (ultimoIdx >= 0) {
+      const ajuste = +(Math.max(0, restante) - (acumulado - atualizado[ultimoIdx].percentual)).toFixed(2)
+      atualizado[ultimoIdx] = { ...atualizado[ultimoIdx], percentual: Math.max(0, ajuste) }
+    }
+    return atualizado
+  }
+
+  // Se outros estão zerados, divide o restante igualmente
+  const cada = +(Math.max(0, restante) / outros.length).toFixed(2)
+  let acum = 0
+  let ultIdx = -1
+  atualizado.forEach((l, i) => {
+    if (i === idxMudado) return
+    ultIdx = i
+    atualizado[i] = { ...l, percentual: cada }
+    acum += cada
+  })
+  if (ultIdx >= 0) {
+    atualizado[ultIdx] = { ...atualizado[ultIdx], percentual: +(Math.max(0, restante) - (acum - cada)).toFixed(2) }
+  }
+  return atualizado
+}
+
 // ─── Sheet: editor de divisão de um lançamento ────────────────────────────────
 function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
-  const [modo, setModo]   = useState('percentual') // 'percentual' | 'valor'
+  const [modo, setModo]     = useState('percentual') // 'percentual' | 'valor'
   const [linhas, setLinhas] = useState([])
   const [saving, setSaving] = useState(false)
+  const [minimized, setMinimized] = useState(false)
 
   useEffect(() => {
     if (!open || !lancamento) return
@@ -520,6 +624,7 @@ function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
       percentual: Number(d.percentual ?? 0),
     })))
     setModo('percentual')
+    setMinimized(false)
   }, [open, lancamento, membros])
 
   if (!open || !lancamento) return null
@@ -527,15 +632,14 @@ function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
   const valorTotal = Number(lancamento.valor ?? 0)
 
   const updatePercentual = (idx, novo) => {
-    const v = Math.max(0, Math.min(100, Number(novo) || 0))
-    setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, percentual: v } : l))
+    setLinhas(prev => autoBalanceDivisao(prev, idx, novo))
   }
 
   const updateValor = (idx, novo) => {
     if (valorTotal <= 0) return
     const v = Math.max(0, Math.min(valorTotal, Number(novo) || 0))
     const pct = +(v / valorTotal * 100).toFixed(2)
-    setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, percentual: pct } : l))
+    setLinhas(prev => autoBalanceDivisao(prev, idx, pct))
   }
 
   const dividirIgualmente = () => {
@@ -557,94 +661,136 @@ function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe max-h-[90dvh] overflow-y-auto">
-        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
-        <div className="px-4 pb-6 space-y-4">
-          <div>
-            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Dividir entre membros</h3>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-              Total: <strong className="text-slate-700 dark:text-slate-300">{formatCurrency(valorTotal)}</strong>
+      {/* Overlay — some quando minimizado pra deixar interagir com fundo */}
+      {!minimized && (
+        <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
+      )}
+
+      <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe shadow-2xl transition-all duration-300
+        ${minimized ? 'max-h-[4.5rem] overflow-hidden' : 'max-h-[90dvh] overflow-y-auto'}`}>
+
+        {/* Handle de minimizar/expandir (clicável) */}
+        <button type="button" onClick={() => setMinimized(v => !v)}
+          className="w-full flex flex-col items-center pt-3 pb-2 active:bg-slate-50 dark:active:bg-slate-700/40"
+          aria-label={minimized ? 'Expandir' : 'Minimizar'}>
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-500 rounded-full" />
+          {minimized && (
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
+              Dividir conta · toque para expandir
             </p>
-          </div>
+          )}
+        </button>
 
-          {/* Toggle modo */}
-          <div className="flex rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-600">
-            {[
-              { id: 'percentual', label: '% Porcentagem' },
-              { id: 'valor',      label: 'R$ Valor' },
-            ].map(opt => (
-              <button key={opt.id} type="button" onClick={() => setModo(opt.id)}
-                className={`flex-1 py-2.5 text-xs font-semibold transition-colors
-                  ${modo === opt.id
-                    ? 'bg-primary text-white'
-                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
+        {!minimized && (
+          <div className="px-4 pb-10 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Dividir entre membros</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  Total: <strong className="text-slate-700 dark:text-slate-300">{formatCurrency(valorTotal)}</strong>
+                </p>
+              </div>
+              <button type="button" onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-lg leading-none flex-shrink-0"
+                aria-label="Fechar">×</button>
+            </div>
 
-          {/* Lista de membros */}
-          <div className="space-y-2">
-            {linhas.map((l, idx) => {
-              const valor = +(valorTotal * l.percentual / 100).toFixed(2)
-              return (
-                <div key={l.user_id} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl px-3 py-2.5">
-                  <Avatar nome={l.nome} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{l.nome}</p>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                      {modo === 'percentual' ? formatCurrency(valor) : `${l.percentual.toFixed(2)}%`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Toggle modo */}
+            <div className="flex rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-600">
+              {[
+                { id: 'percentual', label: '% Porcentagem' },
+                { id: 'valor',      label: 'R$ Valor' },
+              ].map(opt => (
+                <button key={opt.id} type="button" onClick={() => setModo(opt.id)}
+                  className={`flex-1 py-2.5 text-xs font-semibold transition-colors
+                    ${modo === opt.id
+                      ? 'bg-primary text-white'
+                      : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Lista de membros — cada um com slider + input */}
+            <div className="space-y-3">
+              {linhas.map((l, idx) => {
+                const valor = +(valorTotal * l.percentual / 100).toFixed(2)
+                return (
+                  <div key={l.user_id} className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl px-3 py-3 space-y-2.5">
+                    {/* Linha de cima: avatar + nome + input numérico */}
+                    <div className="flex items-center gap-3">
+                      <Avatar nome={l.nome} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{l.nome}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                          {modo === 'percentual'
+                            ? `${formatCurrency(valor)} · ${l.percentual.toFixed(0)}%`
+                            : `${l.percentual.toFixed(0)}% do total`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          max={modo === 'percentual' ? 100 : valorTotal}
+                          step={modo === 'percentual' ? 1 : 0.01}
+                          value={modo === 'percentual' ? Math.round(l.percentual) : valor}
+                          onChange={e => modo === 'percentual'
+                            ? updatePercentual(idx, e.target.value)
+                            : updateValor(idx, e.target.value)
+                          }
+                          className="w-20 text-right text-sm font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 outline-none focus:border-primary text-slate-800 dark:text-slate-100"
+                        />
+                        <span className="text-xs text-slate-400 dark:text-slate-500 w-3">
+                          {modo === 'percentual' ? '%' : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Slider de porcentagem */}
                     <input
-                      type="number"
-                      inputMode="decimal"
+                      type="range"
                       min={0}
-                      max={modo === 'percentual' ? 100 : valorTotal}
-                      step={modo === 'percentual' ? 1 : 0.01}
-                      value={modo === 'percentual'
-                        ? l.percentual
-                        : valor}
-                      onChange={e => modo === 'percentual'
-                        ? updatePercentual(idx, e.target.value)
-                        : updateValor(idx, e.target.value)
-                      }
-                      className="w-20 text-right text-sm font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 outline-none focus:border-primary text-slate-800 dark:text-slate-100"
+                      max={100}
+                      step={1}
+                      value={l.percentual}
+                      onChange={e => updatePercentual(idx, e.target.value)}
+                      className="w-full accent-primary cursor-pointer"
+                      aria-label={`Porcentagem de ${l.nome}`}
                     />
-                    <span className="text-xs text-slate-400 dark:text-slate-500 w-3">
-                      {modo === 'percentual' ? '%' : ''}
-                    </span>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
 
-          {/* Status soma */}
-          <div className={`text-center text-xs font-medium px-3 py-2 rounded-xl
-            ${podeSubmeter
-              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-              : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'}`}>
-            Soma: {somaPct.toFixed(2)}% {podeSubmeter ? '✓' : '— precisa ser 100%'}
-          </div>
+            {/* Status soma */}
+            <div className={`text-center text-xs font-medium px-3 py-2 rounded-xl
+              ${podeSubmeter
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'}`}>
+              Soma: {somaPct.toFixed(2)}% {podeSubmeter ? '✓' : '— precisa ser 100%'}
+            </div>
 
-          <div className="flex gap-2">
-            <button type="button" onClick={dividirIgualmente}
-              className="px-3 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-xs font-semibold">
-              ↺ Igualmente
-            </button>
-            <button type="button" onClick={onClose}
-              className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 text-sm font-medium">
-              Cancelar
-            </button>
-            <button type="button" onClick={handleSave} disabled={!podeSubmeter || saving}
-              className="flex-1 py-3 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
-              {saving ? 'Salvando...' : 'Aplicar'}
-            </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={dividirIgualmente}
+                className="px-3 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-xs font-semibold">
+                ↺ Igualmente
+              </button>
+              <button type="button" onClick={onClose}
+                className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                Cancelar
+              </button>
+              <button type="button" onClick={handleSave} disabled={!podeSubmeter || saving}
+                className="flex-1 py-3 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
+                {saving ? 'Salvando...' : 'Aplicar'}
+              </button>
+            </div>
+
+            {/* Espaço extra para a bottom nav não colar */}
+            <div className="h-16" />
           </div>
-        </div>
+        )}
       </div>
     </>
   )
@@ -654,9 +800,13 @@ function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
 function PagadorSheet({ open, lancamento, membros, onClose, onConfirm }) {
   const [selected, setSelected] = useState(null)
   const [saving, setSaving]     = useState(false)
+  const [minimized, setMinimized] = useState(false)
 
   useEffect(() => {
-    if (open) setSelected(lancamento?.pago_por_user_id ?? null)
+    if (open) {
+      setSelected(lancamento?.pago_por_user_id ?? null)
+      setMinimized(false)
+    }
   }, [open, lancamento])
 
   if (!open) return null
@@ -672,14 +822,34 @@ function PagadorSheet({ open, lancamento, membros, onClose, onConfirm }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
-        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
-        <div className="px-4 pb-6 space-y-3">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Quem pagou?</h3>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            {lancamento?.descricao} · {formatCurrency(Number(lancamento?.valor ?? 0))}
-          </p>
+      {!minimized && (
+        <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
+      )}
+      <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe shadow-2xl transition-all duration-300
+        ${minimized ? 'max-h-[4.5rem] overflow-hidden' : 'max-h-[90dvh] overflow-y-auto'}`}>
+        <button type="button" onClick={() => setMinimized(v => !v)}
+          className="w-full flex flex-col items-center pt-3 pb-2 active:bg-slate-50 dark:active:bg-slate-700/40"
+          aria-label={minimized ? 'Expandir' : 'Minimizar'}>
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-500 rounded-full" />
+          {minimized && (
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
+              Quem pagou · toque para expandir
+            </p>
+          )}
+        </button>
+        {!minimized && (
+        <div className="px-4 pb-10 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Quem pagou?</h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                {lancamento?.descricao} · {formatCurrency(Number(lancamento?.valor ?? 0))}
+              </p>
+            </div>
+            <button type="button" onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-lg leading-none flex-shrink-0"
+              aria-label="Fechar">×</button>
+          </div>
 
           <div className="space-y-1.5">
             {membros.map(m => (
@@ -715,7 +885,10 @@ function PagadorSheet({ open, lancamento, membros, onClose, onConfirm }) {
               {saving ? 'Salvando...' : '✓ Confirmar pagamento'}
             </button>
           </div>
+          {/* Espaço extra pra bottom nav não colar */}
+          <div className="h-16" />
         </div>
+        )}
       </div>
     </>
   )
