@@ -64,9 +64,9 @@ export function useFamilia() {
 
       setFamilias(familiasComRole)
 
-      // Mantém a seleção atual se ainda válida, senão usa a primeira
+      // Mantém a seleção atual se ainda válida, senão limpa (usuário escolhe manualmente)
       setFamiliaAtualId(prev =>
-        prev && ids.includes(prev) ? prev : ids[0]
+        prev && ids.includes(prev) ? prev : null
       )
       setConvitesPendentes([])
     } else {
