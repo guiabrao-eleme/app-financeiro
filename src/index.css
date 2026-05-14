@@ -10,13 +10,13 @@
 }
 
 .dark {
-  --color-primary: 59 130 246; /* Brighter blue for dark mode */
-  --color-primary-hover: 96 165 250;
-  --color-primary-light: 37 99 235;
-  --color-background: #0F172A;
-  --color-surface: #1E293B;
-  --color-surface-2: #334155;
-  --color-border: #334155;
+  --color-primary: 96 165 250; /* azul mais vibrante pra destacar no escuro */
+  --color-primary-hover: 147 197 253;
+  --color-primary-light: 59 130 246;
+  --color-background: #070B16;  /* bem mais escuro — quase preto azulado */
+  --color-surface: #111827;
+  --color-surface-2: #1C2740;
+  --color-border: #2A3650;
 }
 
 /* MONOCHROME PALETTE */
@@ -122,3 +122,41 @@
     transform: translateY(0);
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   AJUSTE FINO DO TEMA ESCURO
+   Os componentes usam classes fixas (dark:bg-slate-800, dark:text-slate-500…).
+   Este bloco remapeia essas classes no modo escuro para:
+   • Fundos/abas MAIS ESCUROS — destacam melhor do conteúdo
+   • Bordas MAIS DEFINIDAS — dão contorno sem pesar
+   • Textos MAIS CLAROS — leitura com bem mais contraste
+   Usa o seletor `html.dark` (a classe .dark fica no <html>) pra ter
+   especificidade maior que as utilities dark: do Tailwind e vencer sempre.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ── Fundos: mais escuros (hierarquia bg < card < superfícies) ── */
+html.dark .dark\:bg-slate-800        { background-color: #111827; } /* cards, bottom nav, modais */
+html.dark .dark\:bg-slate-700        { background-color: #1C2740; } /* superfícies secundárias */
+html.dark .dark\:bg-slate-700\/50    { background-color: rgb(28 39 64 / 0.5); }
+html.dark .dark\:bg-slate-700\/40    { background-color: rgb(28 39 64 / 0.4); }
+html.dark .dark\:bg-slate-600        { background-color: #2A3650; } /* botões/chips terciários */
+html.dark .dark\:bg-slate-500        { background-color: #3E4D6B; }
+
+/* ── Bordas: mais visíveis pra dar contorno ── */
+html.dark .dark\:border-slate-800     { border-color: #1C2740; }
+html.dark .dark\:border-slate-700     { border-color: #2A3650; }
+html.dark .dark\:border-slate-700\/40 { border-color: rgb(42 54 80 / 0.4); }
+html.dark .dark\:border-slate-600     { border-color: #3A4A66; }
+html.dark .dark\:border-slate-500     { border-color: #4D5E7E; }
+
+/* ── Textos: mais claros pra ter destaque e leitura fácil ── */
+html.dark .dark\:text-slate-600      { color: #8A97AD; } /* ícones/labels bem sutis */
+html.dark .dark\:text-slate-500      { color: #9EABC0; } /* texto auxiliar */
+html.dark .dark\:text-slate-400      { color: #BCC7D8; } /* texto secundário */
+html.dark .dark\:text-slate-300      { color: #D8DFEA; } /* texto de corpo */
+html.dark .dark\:text-slate-200      { color: #EEF2F7; } /* texto em destaque */
+html.dark .dark\:text-slate-100      { color: #FFFFFF; } /* títulos */
+
+/* ── Placeholders mais visíveis no escuro ── */
+html.dark .dark\:placeholder-slate-400::placeholder { color: #8A97AD; }
+html.dark .dark\:placeholder-slate-500::placeholder { color: #76839A; }
