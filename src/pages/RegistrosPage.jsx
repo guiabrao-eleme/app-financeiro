@@ -204,6 +204,13 @@ export default function RegistrosPage({ showModal, onOpenFamilia }) {
   const [sortBy, setSortBy] = useState('data_desc')
   const [page, setPage] = useState(1)
 
+  // Advanced Filters
+  const [showFilters, setShowFilters] = useState(false)
+  const [filterStartDate, setFilterStartDate] = useState('')
+  const [filterEndDate, setFilterEndDate] = useState('')
+  const [filterMinValor, setFilterMinValor] = useState('')
+  const [filterMaxValor, setFilterMaxValor] = useState('')
+
   // Edição
   const [editItem, setEditItem] = useState(null)
   const [editEscopo, setEditEscopo] = useState('apenas_este')
@@ -297,7 +304,17 @@ export default function RegistrosPage({ showModal, onOpenFamilia }) {
       chip === 'parcelados'  ? item.tipo_repeticao === 'parcelado' :
       item.categoria === chip
     const matchCartao = cartaoFilter === null ? true : item.cartao_id === cartaoFilter
-    return matchSearch && matchChip && matchCartao
+
+    // Advanced filters
+    const itemDateStr = item.data_vencimento || item.data_registro || ''
+    const matchStart = filterStartDate ? itemDateStr >= filterStartDate : true
+    const matchEnd = filterEndDate ? itemDateStr <= filterEndDate : true
+
+    const itemVal = Number(item.valor)
+    const matchMinVal = filterMinValor ? itemVal >= Number(filterMinValor) : true
+    const matchMaxVal = filterMaxValor ? itemVal <= Number(filterMaxValor) : true
+
+    return matchSearch && matchChip && matchCartao && matchStart && matchEnd && matchMinVal && matchMaxVal
   })
 
   // Ordenação
@@ -639,7 +656,37 @@ export default function RegistrosPage({ showModal, onOpenFamilia }) {
           {search && (
             <button onClick={() => setSearch('')} className="text-white/50 hover:text-white">✕</button>
           )}
+          <button onClick={() => setShowFilters(!showFilters)} className={`ml-2 p-1.5 rounded-lg transition-colors ${showFilters ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white'}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            </svg>
+          </button>
         </div>
+
+        {/* Filtros Avançados Expansíveis */}
+        {showFilters && (
+          <div className="mt-3 grid grid-cols-2 gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
+            <div>
+              <label className="block text-[10px] text-white/60 mb-1 font-semibold uppercase">De (Data)</label>
+              <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="w-full bg-white/10 border-0 rounded-lg text-xs text-white px-2 py-1.5 outline-none focus:ring-1 focus:ring-white/30" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-white/60 mb-1 font-semibold uppercase">Até (Data)</label>
+              <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="w-full bg-white/10 border-0 rounded-lg text-xs text-white px-2 py-1.5 outline-none focus:ring-1 focus:ring-white/30" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-white/60 mb-1 font-semibold uppercase">Valor Mín (R$)</label>
+              <input type="number" placeholder="0.00" value={filterMinValor} onChange={e => setFilterMinValor(e.target.value)} className="w-full bg-white/10 border-0 rounded-lg text-xs text-white placeholder-white/30 px-2 py-1.5 outline-none focus:ring-1 focus:ring-white/30" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-white/60 mb-1 font-semibold uppercase">Valor Máx (R$)</label>
+              <input type="number" placeholder="999.00" value={filterMaxValor} onChange={e => setFilterMaxValor(e.target.value)} className="w-full bg-white/10 border-0 rounded-lg text-xs text-white placeholder-white/30 px-2 py-1.5 outline-none focus:ring-1 focus:ring-white/30" />
+            </div>
+            <div className="col-span-2 flex justify-end mt-1">
+               <button onClick={() => { setFilterStartDate(''); setFilterEndDate(''); setFilterMinValor(''); setFilterMaxValor(''); }} className="text-xs text-white/60 hover:text-white font-medium transition-colors">Limpar Filtros</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Chips de filtro */}

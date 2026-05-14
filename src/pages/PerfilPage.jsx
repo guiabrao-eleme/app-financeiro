@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { useCartoes, getCorMeta } from '../hooks/useCartoes'
 import { usePushNotifications } from '../hooks/usePushNotifications'
@@ -270,6 +271,7 @@ function CartaoRow({ cartao, onUpdate, onDelete }) {
 // ─── Página de perfil ─────────────────────────────────────────────────────────
 export default function PerfilPage({ onBack }) {
   const { user, signOut, updateUserMeta } = useAuth()
+  const { isDark, toggleTheme, palette, setPalette } = useTheme()
   const { cartoes, loading: cartoesLoading, createCartao, deleteCartao, updateCartao } = useCartoes()
   const { supported: pushSupported, permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications()
   const gcal = useGoogleCalendar()
@@ -411,6 +413,63 @@ export default function PerfilPage({ onBack }) {
 
       {/* Conteúdo */}
       <div className="px-4 py-5 space-y-6 pb-24">
+
+        {/* Meus Cartões */}
+        {/* ── Aparencia / Temas ── */}
+        <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Aparência
+            </h2>
+          </div>
+          <div className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Modo Escuro</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Ativar tema noturno</p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0
+                  ${isDark ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-600'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform
+                  ${isDark ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Paleta de Cores</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setPalette('default')}
+                  className={`py-2 px-1 text-center rounded-xl border-2 transition-all ${palette === 'default' ? 'border-primary bg-primary/5' : 'border-transparent bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#1A3A5C] dark:bg-[#3B82F6] mx-auto mb-1"></div>
+                  <span className={`text-[10px] font-semibold ${palette === 'default' ? 'text-primary' : 'text-slate-500'}`}>Azul</span>
+                </button>
+                <button
+                  onClick={() => setPalette('monochrome')}
+                  className={`py-2 px-1 text-center rounded-xl border-2 transition-all ${palette === 'monochrome' ? 'border-primary bg-primary/5' : 'border-transparent bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#171717] dark:bg-[#E5E5E5] mx-auto mb-1"></div>
+                  <span className={`text-[10px] font-semibold ${palette === 'monochrome' ? 'text-primary' : 'text-slate-500'}`}>P&B</span>
+                </button>
+                <button
+                  onClick={() => setPalette('earth')}
+                  className={`py-2 px-1 text-center rounded-xl border-2 transition-all ${palette === 'earth' ? 'border-primary bg-primary/5' : 'border-transparent bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#78350F] dark:bg-[#FBBF24] mx-auto mb-1"></div>
+                  <span className={`text-[10px] font-semibold ${palette === 'earth' ? 'text-primary' : 'text-slate-500'}`}>Marrom</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Meus Cartões */}
         <section>

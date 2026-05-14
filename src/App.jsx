@@ -13,6 +13,7 @@ import FamiliaPage from './pages/FamiliaPage'
 import PerfilPage from './pages/PerfilPage'
 import BottomNav from './components/layout/BottomNav'
 import NovoRegistroModal from './components/forms/NovoRegistroModal'
+import { AnimatePresence, motion } from 'motion/react'
 
 function AppRouter() {
   const { user, loading } = useAuth()
@@ -113,7 +114,18 @@ function AppRouter() {
 
   return (
     <div className="mx-auto max-w-xl bg-background min-h-screen relative shadow-xl shadow-slate-200/40 dark:shadow-black/40 overflow-x-clip">
-      <div key={appPage}>{renderPage()}</div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={appPage}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="min-h-screen"
+        >
+          {renderPage()}
+        </motion.div>
+      </AnimatePresence>
 
       {appPage !== 'perfil' && (
         <BottomNav

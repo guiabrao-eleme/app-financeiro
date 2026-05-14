@@ -8,7 +8,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#1A3A5C',
+        primary: 'rgb(var(--color-primary) / <alpha-value>)',
+        'primary-hover': 'rgb(var(--color-primary-hover) / <alpha-value>)',
+        'primary-light': 'rgb(var(--color-primary-light) / <alpha-value>)',
         success: '#059669',
         danger: '#DC2626',
         background: 'var(--color-background)',

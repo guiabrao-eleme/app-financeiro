@@ -1,14 +1,64 @@
 :root {
+  /* DEFAULT PALETTE (Blue/Slate) */
+  --color-primary: 26 58 92;
+  --color-primary-hover: 21 48 76;
+  --color-primary-light: 45 88 134;
   --color-background: #F8FAFC;
   --color-surface: #FFFFFF;
   --color-surface-2: #F1F5F9;
   --color-border: #E2E8F0;
 }
+
 .dark {
+  --color-primary: 59 130 246; /* Brighter blue for dark mode */
+  --color-primary-hover: 96 165 250;
+  --color-primary-light: 37 99 235;
   --color-background: #0F172A;
   --color-surface: #1E293B;
   --color-surface-2: #334155;
   --color-border: #334155;
+}
+
+/* MONOCHROME PALETTE */
+:root.theme-monochrome {
+  --color-primary: 23 23 23; /* neutral-900 */
+  --color-primary-hover: 38 38 38;
+  --color-primary-light: 64 64 64;
+  --color-background: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F5F5F5;
+  --color-border: #E5E5E5;
+}
+
+:root.theme-monochrome.dark {
+  --color-primary: 229 229 229; /* neutral-200 */
+  --color-primary-hover: 212 212 212;
+  --color-primary-light: 163 163 163;
+  --color-background: #0A0A0A;
+  --color-surface: #171717;
+  --color-surface-2: #262626;
+  --color-border: #262626;
+}
+
+/* EARTH PALETTE */
+:root.theme-earth {
+  --color-primary: 120 53 15; /* amber-900 */
+  --color-primary-hover: 146 64 14;
+  --color-primary-light: 180 83 9;
+  --color-background: #FEF3C7; /* amber-50 */
+  --color-surface: #FFFBEB; /* amber-50 - lighter */
+  --color-surface-2: #FDE68A; /* amber-200 */
+  --color-border: #FCD34D; /* amber-300 */
+}
+
+:root.theme-earth.dark {
+  --color-primary: 251 191 36; /* amber-400 */
+  --color-primary-hover: 253 230 138;
+  --color-primary-light: 245 158 11;
+  --color-background: #451A03; /* amber-950 */
+  --color-surface: #78350F; /* amber-900 */
+  --color-surface-2: #92400E; /* amber-800 */
+  --color-border: #92400E;
 }
 
 @tailwind base;
