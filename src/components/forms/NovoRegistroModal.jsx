@@ -7,6 +7,7 @@ import CurrencyInput from './CurrencyInput'
 import { useCategories } from '../../hooks/useCategories'
 import { useCartoes, COR_MAP, getCorMeta } from '../../hooks/useCartoes'
 import { useGoogleCalendar } from '../../hooks/useGoogleCalendar'
+import { useSwipeDown } from '../../utils/useSwipeDown'
 
 const EMOJIS_SUGERIDOS = [
   '🏠','🚗','🎓','🛍️','💰','📚','💼','🍀','🍕','✈️',
@@ -270,26 +271,44 @@ export default function NovoRegistroModal({
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [visible, setVisible] = useState(false)
+  const [minimized, setMinimized] = useState(false)
   const [creating, setCreating] = useState(false)       // nova categoria
   const [creatingCartao, setCreatingCartao] = useState(false) // novo cartão
 
-  // Scroll lock iOS
+  // Reseta minimização quando abre
+  useEffect(() => { if (open) setMinimized(false) }, [open])
+
+  // Swipe down para minimizar (só ativo quando expandido)
+  const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(
+    () => setMinimized(true),
+    visible && !minimized
+  )
+
+  // Scroll lock iOS — só trava quando aberto E expandido (minimizado libera o fundo)
   useEffect(() => {
-    if (open) {
+    if (open && !minimized) {
       const scrollY = window.scrollY
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
       document.body.style.width = '100%'
       document.body.style.overflowY = 'scroll'
       setTimeout(() => setVisible(true), 10)
-    } else {
+    } else if (!open) {
       const scrollY = parseInt(document.body.style.top || '0') * -1
       document.body.style.position = ''
       document.body.style.top = ''
       document.body.style.width = ''
       document.body.style.overflowY = ''
-      window.scrollTo(0, scrollY)
+      if (scrollY > 0) window.scrollTo(0, scrollY)
       setVisible(false)
+    } else {
+      // open + minimized: libera fundo mantendo posição
+      const scrollY = parseInt(document.body.style.top || '0') * -1
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflowY = ''
+      if (scrollY > 0) window.scrollTo(0, scrollY)
     }
     return () => {
       document.body.style.position = ''
@@ -515,20 +534,53 @@ export default function NovoRegistroModal({
   return (
     <>
       <ToastContainer />
+      {!minimized && (
+        <div
+          className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+          onClick={handleClose}
+        />
+      )}
       <div
-        className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={handleClose}
-      />
-      <div
-        className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl z-50 bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl
-          transition-transform duration-300 ease-out max-h-[92vh] overflow-y-auto
-          ${visible ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ transform: visible ? 'translate(-50%, 0)' : 'translate(-50%, 100%)' }}
+        ref={sheetRef}
+        {...touchHandlers}
+        className={`fixed left-1/2 z-50 bg-white dark:bg-slate-800 shadow-2xl transition-all duration-300 ease-out
+          ${minimized
+            ? 'rounded-3xl w-[calc(100%-2rem)] max-w-md max-h-[5.5rem] overflow-hidden'
+            : `bottom-0 rounded-t-3xl w-full max-w-xl max-h-[92vh] overflow-y-auto pb-safe
+                ${visible ? '' : 'translate-y-full'}`}`}
+        style={{
+          ...(minimized
+            ? {
+                ...swipeStyle,
+                bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)',
+              }
+            : {
+                ...swipeStyle,
+                transform: visible
+                  ? swipeStyle.transform
+                  : 'translate(-50%, 100%)',
+              }),
+        }}
       >
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full" />
-        </div>
+        {/* Handle de minimizar/expandir (clicável) */}
+        <button type="button" onClick={() => setMinimized(v => !v)}
+          className={`w-full flex flex-col items-center active:bg-slate-50 dark:active:bg-slate-700/40
+            ${minimized ? 'py-4 px-4' : 'pt-3 pb-1'}`}
+          aria-label={minimized ? 'Expandir' : 'Minimizar'}>
+          <div className={`bg-slate-300 dark:bg-slate-500 rounded-full
+            ${minimized ? 'w-16 h-1.5 mb-2' : 'w-10 h-1'}`} />
+          {minimized && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {isEdit ? 'Editar Registro' : 'Novo Registro'}
+              </p>
+              <span className="text-slate-400 dark:text-slate-500 text-xs">↑ toque para expandir</span>
+            </div>
+          )}
+        </button>
 
+        {!minimized && (
+        <>
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700">
           <div>
             <h2 className="text-base font-bold text-slate-800 dark:text-slate-200">
@@ -875,7 +927,11 @@ export default function NovoRegistroModal({
               hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
             {saving ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Salvar registro'}
           </button>
+          {/* Espaço extra pra não colar na bottom nav */}
+          <div className="h-16" />
         </div>
+        </>
+        )}
       </div>
     </>
   )

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { fetchFamiliaLancamentos } from '../utils/familiaLancamentos'
+import { useSwipeDown, useBodyScrollLock } from '../utils/useSwipeDown'
 import { useTheme } from '../contexts/ThemeContext'
 import { formatCurrency } from '../utils/format'
 import { useCategories, getCatMeta } from '../hooks/useCategories'
@@ -20,16 +21,55 @@ const DAY_HEADERS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
 // ─── Sheet de opções de exportação ───────────────────────────────────────────
 function ExportSheet({ open, onClose, onExportAll, onExportNotify, loading }) {
+  const [minimized, setMinimized] = useState(false)
+  const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
+  useBodyScrollLock(open && !minimized)
+  useEffect(() => { if (open) setMinimized(false) }, [open])
   if (!open) return null
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe">
-        <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
-        <div className="px-4 pb-6 space-y-3">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            📲 Exportar para Google Calendar
-          </p>
+      {!minimized && (
+        <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
+      )}
+      <div
+        ref={sheetRef}
+        {...touchHandlers}
+        className={`fixed left-1/2 z-50 bg-white dark:bg-slate-800 shadow-2xl transition-all duration-300
+          ${minimized
+            ? 'rounded-3xl w-[calc(100%-2rem)] max-w-md max-h-[5.5rem] overflow-hidden'
+            : 'bottom-0 rounded-t-3xl w-full max-w-xl pb-safe max-h-[90dvh] overflow-y-auto'}`}
+        style={{
+          ...swipeStyle,
+          bottom: minimized
+            ? 'calc(env(safe-area-inset-bottom) + 5.5rem)'
+            : undefined
+        }}>
+        <button type="button" onClick={() => setMinimized(v => !v)}
+          className={`w-full flex flex-col items-center active:bg-slate-50 dark:active:bg-slate-700/40
+            ${minimized ? 'py-4 px-4' : 'pt-3 pb-2'}`}
+          aria-label={minimized ? 'Expandir' : 'Minimizar'}>
+          <div className={`bg-slate-300 dark:bg-slate-500 rounded-full
+            ${minimized ? 'w-16 h-1.5 mb-2' : 'w-12 h-1.5'}`} />
+          {minimized && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Exportar agenda
+              </p>
+              <span className="text-slate-400 dark:text-slate-500 text-xs">↑ toque para expandir</span>
+            </div>
+          )}
+        </button>
+
+        {!minimized && (
+        <div className="px-4 pb-10 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex-1">
+              📲 Exportar para Google Calendar
+            </p>
+            <button type="button" onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-lg leading-none flex-shrink-0"
+              aria-label="Fechar">×</button>
+          </div>
           <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
             Baixa um arquivo <strong>.ics</strong> que pode ser importado no Google Calendar,
             Apple Calendar, Outlook e qualquer outro app de agenda.
@@ -62,7 +102,9 @@ function ExportSheet({ open, onClose, onExportAll, onExportNotify, loading }) {
           <button onClick={onClose} className="w-full py-3 text-sm text-slate-400 dark:text-slate-500 font-medium">
             Cancelar
           </button>
+          <div className="h-16" />
         </div>
+        )}
       </div>
     </>
   )

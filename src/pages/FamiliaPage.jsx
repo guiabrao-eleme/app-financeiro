@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../utils/format'
 import { fetchResumosFamilias } from '../utils/familiaLancamentos'
 import { divisaoIgualitaria, divisaoComValor, divisaoValida, calcularSaldos, minhaFatia } from '../utils/divisao'
-import { useSwipeDown } from '../utils/useSwipeDown'
+import { useSwipeDown, useBodyScrollLock } from '../utils/useSwipeDown'
 import { useToast } from '../components/ui/Toast'
 import SkyToggle from '../components/ui/SkyToggle'
 import MonthYearPicker from '../components/ui/MonthYearPicker'
@@ -146,6 +146,7 @@ function EditarFamiliaSheet({ open, familia, onClose, onSave }) {
   const [saving, setSaving] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
+  useBodyScrollLock(open && !minimized)
 
   useEffect(() => {
     if (open && familia) {
@@ -309,6 +310,7 @@ function NovoLancamentoSheet({ open, onClose, onSave, editingItem }) {
   const [saving, setSaving] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
+  useBodyScrollLock(open && !minimized)
 
   useEffect(() => {
     if (open) {
@@ -706,6 +708,7 @@ function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
   const [saving, setSaving] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
+  useBodyScrollLock(open && !minimized)
 
   useEffect(() => {
     if (!open || !lancamento) return
@@ -910,6 +913,7 @@ function PagadorSheet({ open, lancamento, membros, onClose, onConfirm }) {
   const [saving, setSaving]     = useState(false)
   const [minimized, setMinimized] = useState(false)
   const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
+  useBodyScrollLock(open && !minimized)
 
   useEffect(() => {
     if (open) {

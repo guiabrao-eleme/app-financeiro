@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import SkyToggle from '../components/ui/SkyToggle'
+import { useSwipeDown } from '../utils/useSwipeDown'
 
 // ─── Paleta de cores dos cards ────────────────────────────────────────────────
 export const CORES = [
@@ -22,12 +23,17 @@ const getCor = (id) => CORES.find(c => c.id === id) ?? CORES[0]
 function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
   const { user } = useAuth()
   const [visible, setVisible] = useState(false)
+  const [minimized, setMinimized] = useState(false)
   const [titulo, setTitulo] = useState('')
   const [conteudo, setConteudo] = useState('')
   const [cor, setCor] = useState('amarelo')
   const [saving, setSaving] = useState(false)
 
   const isEdit = !!editCard
+  const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(
+    () => setMinimized(true),
+    visible && !minimized
+  )
 
   // Inicializa / reseta campos ao abrir
   useEffect(() => {
@@ -35,15 +41,16 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
       setTitulo(editCard?.titulo ?? '')
       setConteudo(editCard?.conteudo ?? '')
       setCor(editCard?.cor ?? 'amarelo')
+      setMinimized(false)
       setTimeout(() => setVisible(true), 10)
     } else {
       setVisible(false)
     }
   }, [open, editCard])
 
-  // Scroll lock iOS (mesmo padrão do NovoRegistroModal)
+  // Scroll lock iOS — só trava quando aberto E expandido
   useEffect(() => {
-    if (open) {
+    if (open && !minimized) {
       const scrollY = window.scrollY
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
@@ -55,7 +62,7 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
       document.body.style.top = ''
       document.body.style.width = ''
       document.body.style.overflowY = ''
-      window.scrollTo(0, scrollY)
+      if (!open && scrollY > 0) window.scrollTo(0, scrollY)
     }
     return () => {
       document.body.style.position = ''
@@ -63,7 +70,7 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
       document.body.style.width = ''
       document.body.style.overflowY = ''
     }
-  }, [open])
+  }, [open, minimized])
 
   if (!open) return null
 
@@ -110,22 +117,55 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
 
   return (
     <>
-      {/* Overlay — z-[55] garante que cobre o BottomNav (z-40) */}
-      <div
-        className={`fixed inset-0 bg-black/40 z-[55] transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={close}
-      />
+      {/* Overlay — some quando minimizado pra deixar interagir com fundo */}
+      {!minimized && (
+        <div
+          className={`fixed inset-0 bg-black/40 z-[55] transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+          onClick={close}
+        />
+      )}
 
       {/* Sheet — z-[60] acima de tudo */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-[60] bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl
-          transition-transform duration-300 ease-out max-h-[92vh] overflow-y-auto
-          ${visible ? 'translate-y-0' : 'translate-y-full'}`}
+        ref={sheetRef}
+        {...touchHandlers}
+        className={`fixed left-1/2 z-[60] bg-white dark:bg-slate-800 shadow-2xl transition-all duration-300 ease-out
+          ${minimized
+            ? 'rounded-3xl w-[calc(100%-2rem)] max-w-md max-h-[5.5rem] overflow-hidden'
+            : `bottom-0 rounded-t-3xl w-full max-w-xl max-h-[92vh] overflow-y-auto`}`}
+        style={{
+          ...(minimized
+            ? {
+                ...swipeStyle,
+                bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)',
+              }
+            : {
+                ...swipeStyle,
+                transform: visible
+                  ? swipeStyle.transform
+                  : 'translate(-50%, 100%)',
+              }),
+        }}
       >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-slate-200 dark:bg-slate-600 rounded-full" />
-        </div>
+        {/* Handle de minimizar/expandir (clicável) */}
+        <button type="button" onClick={() => setMinimized(v => !v)}
+          className={`w-full flex flex-col items-center active:bg-slate-50 dark:active:bg-slate-700/40
+            ${minimized ? 'py-4 px-4' : 'pt-3 pb-1'}`}
+          aria-label={minimized ? 'Expandir' : 'Minimizar'}>
+          <div className={`bg-slate-300 dark:bg-slate-500 rounded-full
+            ${minimized ? 'w-16 h-1.5 mb-2' : 'w-10 h-1'}`} />
+          {minimized && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">
+                {titulo || (isEdit ? 'Editar nota' : 'Nova nota')}
+              </p>
+              <span className="text-slate-400 dark:text-slate-500 text-xs flex-shrink-0">↑ expandir</span>
+            </div>
+          )}
+        </button>
+
+        {!minimized && (
+        <>
 
         {/* Cabeçalho: paleta + título */}
         <div className={`${corMeta.header} px-5 pt-3 pb-4`}>
@@ -198,6 +238,8 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
             {saving ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Criar nota'}
           </button>
         </div>
+        </>
+        )}
       </div>
     </>
   )
