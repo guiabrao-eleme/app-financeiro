@@ -1,35 +1,41 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 
 /**
  * Hook que adiciona gesto de "arrastar para baixo" num bottom sheet.
- * Quando o usuário arrasta o conteúdo do sheet para baixo (e está no topo do scroll),
- * o sheet visualmente desce. Se arrastar mais de THRESHOLD px, chama onMinimize.
+ * Usa CALLBACK REF para anexar/desanexar listeners corretamente mesmo quando
+ * o sheet renderiza condicionalmente (retorna null e depois aparece).
  *
- * IMPORTANTE: usa addEventListener nativo com passive:false para conseguir
- * chamar preventDefault() — assim o navegador não rola a página por trás
- * enquanto o usuário arrasta o sheet.
+ * O preventDefault() no touchmove ativo impede o navegador de rolar a página
+ * atrás enquanto o usuário arrasta o sheet — sem precisar travar o body.
  *
- * @param {Function} onMinimize - callback chamado ao minimizar
+ * @param {Function} onMinimize - callback chamado ao minimizar (drag > 80px)
  * @param {Boolean} enabled - se o gesto está ativo (geralmente !minimized)
  */
 export function useSwipeDown(onMinimize, enabled = true) {
   const [translateY, setTranslateY] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
-  const sheetRef = useRef(null)
 
-  // Refs para os handlers terem acesso ao valor mais recente sem re-criar listeners
-  const enabledRef     = useRef(enabled)
-  const translateYRef  = useRef(0)
-  const onMinimizeRef  = useRef(onMinimize)
+  // Refs pros handlers terem acesso ao valor mais recente
+  const enabledRef    = useRef(enabled)
+  const translateYRef = useRef(0)
+  const onMinimizeRef = useRef(onMinimize)
+  const cleanupRef    = useRef(null)
 
-  useEffect(() => { enabledRef.current = enabled }, [enabled])
-  useEffect(() => { translateYRef.current = translateY }, [translateY])
-  useEffect(() => { onMinimizeRef.current = onMinimize }, [onMinimize])
+  enabledRef.current    = enabled
+  translateYRef.current = translateY
+  onMinimizeRef.current = onMinimize
 
   const THRESHOLD = 80
 
-  useEffect(() => {
-    const el = sheetRef.current
+  // Callback ref — chamado quando o DOM node anexa/desanexa.
+  // É a única forma confiável de anexar listeners em componentes
+  // que renderizam condicionalmente (return null → JSX).
+  const sheetRef = useCallback((el) => {
+    // Limpa listeners do node anterior, se houver
+    if (cleanupRef.current) {
+      cleanupRef.current()
+      cleanupRef.current = null
+    }
     if (!el) return
 
     let startY = null
@@ -42,7 +48,6 @@ export function useSwipeDown(onMinimize, enabled = true) {
 
     const handleTouchMove = (e) => {
       if (startY === null) return
-      // Se durante o move começou a rolar (scrollTop > 0), cancela drag
       if (el.scrollTop > 0) {
         startY = null
         setTranslateY(0)
@@ -51,9 +56,9 @@ export function useSwipeDown(onMinimize, enabled = true) {
       }
       const delta = e.touches[0].clientY - startY
       if (delta > 0) {
-        // Previne o scroll nativo do fundo durante o drag
+        // Previne scroll nativo do fundo durante o drag
         e.preventDefault()
-        setTranslateY(delta * 0.7) // resistência elástica
+        setTranslateY(delta * 0.7)
         setIsDragging(true)
       }
     }
@@ -66,16 +71,15 @@ export function useSwipeDown(onMinimize, enabled = true) {
       startY = null
     }
 
-    // passive: false permite preventDefault no touchmove
-    el.addEventListener('touchstart', handleTouchStart, { passive: false })
-    el.addEventListener('touchmove',  handleTouchMove,  { passive: false })
-    el.addEventListener('touchend',   handleTouchEnd)
+    el.addEventListener('touchstart',  handleTouchStart, { passive: false })
+    el.addEventListener('touchmove',   handleTouchMove,  { passive: false })
+    el.addEventListener('touchend',    handleTouchEnd)
     el.addEventListener('touchcancel', handleTouchEnd)
 
-    return () => {
-      el.removeEventListener('touchstart', handleTouchStart)
-      el.removeEventListener('touchmove',  handleTouchMove)
-      el.removeEventListener('touchend',   handleTouchEnd)
+    cleanupRef.current = () => {
+      el.removeEventListener('touchstart',  handleTouchStart)
+      el.removeEventListener('touchmove',   handleTouchMove)
+      el.removeEventListener('touchend',    handleTouchEnd)
       el.removeEventListener('touchcancel', handleTouchEnd)
     }
   }, [])
@@ -86,20 +90,15 @@ export function useSwipeDown(onMinimize, enabled = true) {
       transform: `translate(-50%, ${translateY}px)`,
       transition: isDragging ? 'none' : 'transform 0.25s ease-out',
     },
-    // touchHandlers vazio — listeners aplicados via useEffect com passive:false
-    touchHandlers: {},
+    touchHandlers: {}, // legado: listeners agora via callback ref
   }
 }
 
 /**
- * Hook auxiliar para travar o scroll do body enquanto um modal/sheet está aberto e expandido.
- * Combina com useSwipeDown para evitar que o fundo "mexa" durante o gesto.
+ * Hook auxiliar para travar o scroll do body — DEPRECADO.
+ * Não use! O preventDefault no useSwipeDown já impede o scroll do fundo durante o drag.
+ * Travar o body causa problemas com outros scrolls da página.
  */
-export function useBodyScrollLock(active) {
-  useEffect(() => {
-    if (!active) return
-    const original = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = original }
-  }, [active])
+export function useBodyScrollLock() {
+  // No-op intencional — mantido apenas para não quebrar imports existentes.
 }

@@ -48,9 +48,9 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
     }
   }, [open, editCard])
 
-  // Scroll lock iOS — só trava quando aberto E expandido
+  // Scroll lock iOS — comportamento original
   useEffect(() => {
-    if (open && !minimized) {
+    if (open) {
       const scrollY = window.scrollY
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
@@ -62,13 +62,31 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
       document.body.style.top = ''
       document.body.style.width = ''
       document.body.style.overflowY = ''
-      if (!open && scrollY > 0) window.scrollTo(0, scrollY)
+      window.scrollTo(0, scrollY)
     }
     return () => {
       document.body.style.position = ''
       document.body.style.top = ''
       document.body.style.width = ''
       document.body.style.overflowY = ''
+    }
+  }, [open])
+
+  // Quando minimizar: libera body pra interagir com fundo
+  useEffect(() => {
+    if (!open) return
+    if (minimized) {
+      const top = document.body.style.top
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflowY = ''
+      return () => {
+        document.body.style.position = 'fixed'
+        document.body.style.top = top
+        document.body.style.width = '100%'
+        document.body.style.overflowY = 'scroll'
+      }
     }
   }, [open, minimized])
 

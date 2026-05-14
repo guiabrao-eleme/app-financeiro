@@ -284,31 +284,23 @@ export default function NovoRegistroModal({
     visible && !minimized
   )
 
-  // Scroll lock iOS — só trava quando aberto E expandido (minimizado libera o fundo)
+  // Scroll lock iOS — comportamento original (só depende de open)
   useEffect(() => {
-    if (open && !minimized) {
+    if (open) {
       const scrollY = window.scrollY
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
       document.body.style.width = '100%'
       document.body.style.overflowY = 'scroll'
       setTimeout(() => setVisible(true), 10)
-    } else if (!open) {
-      const scrollY = parseInt(document.body.style.top || '0') * -1
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      document.body.style.overflowY = ''
-      if (scrollY > 0) window.scrollTo(0, scrollY)
-      setVisible(false)
     } else {
-      // open + minimized: libera fundo mantendo posição
       const scrollY = parseInt(document.body.style.top || '0') * -1
       document.body.style.position = ''
       document.body.style.top = ''
       document.body.style.width = ''
       document.body.style.overflowY = ''
-      if (scrollY > 0) window.scrollTo(0, scrollY)
+      window.scrollTo(0, scrollY)
+      setVisible(false)
     }
     return () => {
       document.body.style.position = ''
@@ -317,6 +309,28 @@ export default function NovoRegistroModal({
       document.body.style.overflowY = ''
     }
   }, [open])
+
+  // Quando minimizar: libera scroll do body (mas mantém posição do scroll travada)
+  useEffect(() => {
+    if (!open) return
+    if (minimized) {
+      // Salva onde o body estava travado e libera
+      const top = document.body.style.top
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflowY = ''
+      // Não fazer window.scrollTo aqui — manter posição atual visível
+      return () => {
+        // Quando re-expandir: trava de novo restaurando a posição salva
+        const scrollY = parseInt(top || '0') * -1
+        document.body.style.position = 'fixed'
+        document.body.style.top = top
+        document.body.style.width = '100%'
+        document.body.style.overflowY = 'scroll'
+      }
+    }
+  }, [open, minimized])
 
   useEffect(() => {
     if (!open) return
