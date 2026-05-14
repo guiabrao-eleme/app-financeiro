@@ -20,13 +20,9 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Desabilita pull-to-refresh ao arrastar dedo pra baixo (Android Chrome, etc.) */
-  html, body {
-    overscroll-behavior-y: contain;
-    overflow-x: hidden;
-  }
-
+  /* Desabilita pull-to-refresh — só no body, pra não conflitar com scroll dos pages */
   body {
+    overscroll-behavior-y: contain;
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

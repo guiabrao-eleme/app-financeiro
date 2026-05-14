@@ -112,7 +112,7 @@ function AppRouter() {
   const navPage = ['dashboard', 'registros', 'familia', 'calendario', 'anual', 'observacoes'].includes(appPage) ? appPage : 'dashboard'
 
   return (
-    <div className="mx-auto max-w-xl bg-background min-h-screen relative shadow-xl shadow-slate-200/40 dark:shadow-black/40">
+    <div className="mx-auto max-w-xl bg-background min-h-screen relative shadow-xl shadow-slate-200/40 dark:shadow-black/40 overflow-x-clip">
       <div key={appPage}>{renderPage()}</div>
 
       {appPage !== 'perfil' && (
