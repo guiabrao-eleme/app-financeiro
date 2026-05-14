@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../utils/format'
 import { fetchResumosFamilias } from '../utils/familiaLancamentos'
-import { divisaoIgualitaria, divisaoComValor, divisaoValida, calcularSaldos } from '../utils/divisao'
+import { divisaoIgualitaria, divisaoComValor, divisaoValida, calcularSaldos, minhaFatia } from '../utils/divisao'
+import { useSwipeDown } from '../utils/useSwipeDown'
 import { useToast } from '../components/ui/Toast'
 import SkyToggle from '../components/ui/SkyToggle'
 import MonthYearPicker from '../components/ui/MonthYearPicker'
@@ -144,6 +145,7 @@ function EditarFamiliaSheet({ open, familia, onClose, onSave }) {
   const [icone, setIcone]   = useState('👨‍👩‍👧‍👦')
   const [saving, setSaving] = useState(false)
   const [minimized, setMinimized] = useState(false)
+  const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
 
   useEffect(() => {
     if (open && familia) {
@@ -168,16 +170,32 @@ function EditarFamiliaSheet({ open, familia, onClose, onSave }) {
       {!minimized && (
         <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
       )}
-      <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe shadow-2xl transition-all duration-300
-        ${minimized ? 'max-h-[4.5rem] overflow-hidden' : 'max-h-[90dvh] overflow-y-auto'}`}>
+      <div
+        ref={sheetRef}
+        {...touchHandlers}
+        className={`fixed left-1/2 z-50 bg-white dark:bg-slate-800 shadow-2xl transition-all duration-300
+        ${minimized
+          ? 'rounded-3xl w-[calc(100%-2rem)] max-w-md max-h-[5.5rem] overflow-hidden'
+          : 'bottom-0 rounded-t-3xl w-full max-w-xl pb-safe max-h-[90dvh] overflow-y-auto'}`}
+        style={{
+          ...swipeStyle,
+          bottom: minimized
+            ? 'calc(env(safe-area-inset-bottom) + 5.5rem)'
+            : undefined
+        }}>
         <button type="button" onClick={() => setMinimized(v => !v)}
-          className="w-full flex flex-col items-center pt-3 pb-2 active:bg-slate-50 dark:active:bg-slate-700/40"
+          className={`w-full flex flex-col items-center active:bg-slate-50 dark:active:bg-slate-700/40
+            ${minimized ? 'py-4 px-4' : 'pt-3 pb-2'}`}
           aria-label={minimized ? 'Expandir' : 'Minimizar'}>
-          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-500 rounded-full" />
+          <div className={`bg-slate-300 dark:bg-slate-500 rounded-full
+            ${minimized ? 'w-16 h-1.5 mb-2' : 'w-12 h-1.5'}`} />
           {minimized && (
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
-              Editar família · toque para expandir
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Editar família
+              </p>
+              <span className="text-slate-400 dark:text-slate-500 text-xs">↑ toque para expandir</span>
+            </div>
           )}
         </button>
         {!minimized && (
@@ -281,8 +299,8 @@ function UserPickerInline({ membroEmails, onSelect }) {
   )
 }
 
-// ─── Modal de adicionar lançamento ────────────────────────────────────────────
-function NovoLancamentoSheet({ open, onClose, onSave }) {
+// ─── Modal de adicionar/editar lançamento ─────────────────────────────────────
+function NovoLancamentoSheet({ open, onClose, onSave, editingItem }) {
   const [tipo, setTipo]     = useState('Saída')
   const [data, setData]     = useState(new Date().toISOString().split('T')[0])
   const [desc, setDesc]     = useState('')
@@ -290,16 +308,26 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
   const [valor, setValor]   = useState('')
   const [saving, setSaving] = useState(false)
   const [minimized, setMinimized] = useState(false)
+  const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
 
   useEffect(() => {
     if (open) {
-      setTipo('Saída'); setDesc(''); setValor('')
-      setData(new Date().toISOString().split('T')[0]); setCat('Outros')
+      if (editingItem) {
+        setTipo(editingItem.tipo)
+        setData(editingItem.data_vencimento)
+        setDesc(editingItem.descricao)
+        setCat(editingItem.categoria || 'Outros')
+        setValor(String(Number(editingItem.valor ?? 0).toFixed(2)).replace('.', ','))
+      } else {
+        setTipo('Saída'); setDesc(''); setValor('')
+        setData(new Date().toISOString().split('T')[0]); setCat('Outros')
+      }
       setMinimized(false)
     }
-  }, [open])
+  }, [open, editingItem])
 
   if (!open) return null
+  const isEdit = !!editingItem
 
   const handleSave = async () => {
     const num = parseFloat(valor.replace(',', '.'))
@@ -316,22 +344,40 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
       {!minimized && (
         <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
       )}
-      <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe shadow-2xl transition-all duration-300
-        ${minimized ? 'max-h-[4.5rem] overflow-hidden' : 'max-h-[90dvh] overflow-y-auto'}`}>
+      <div
+        ref={sheetRef}
+        {...touchHandlers}
+        className={`fixed left-1/2 z-50 bg-white dark:bg-slate-800 shadow-2xl transition-all duration-300
+        ${minimized
+          ? 'rounded-3xl w-[calc(100%-2rem)] max-w-md max-h-[5.5rem] overflow-hidden'
+          : 'bottom-0 rounded-t-3xl w-full max-w-xl pb-safe max-h-[90dvh] overflow-y-auto'}`}
+        style={{
+          ...swipeStyle,
+          bottom: minimized
+            ? 'calc(env(safe-area-inset-bottom) + 5.5rem)'
+            : undefined
+        }}>
         <button type="button" onClick={() => setMinimized(v => !v)}
-          className="w-full flex flex-col items-center pt-3 pb-2 active:bg-slate-50 dark:active:bg-slate-700/40"
+          className={`w-full flex flex-col items-center active:bg-slate-50 dark:active:bg-slate-700/40
+            ${minimized ? 'py-4 px-4' : 'pt-3 pb-2'}`}
           aria-label={minimized ? 'Expandir' : 'Minimizar'}>
-          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-500 rounded-full" />
+          <div className={`bg-slate-300 dark:bg-slate-500 rounded-full
+            ${minimized ? 'w-16 h-1.5 mb-2' : 'w-12 h-1.5'}`} />
           {minimized && (
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
-              Nova conta · toque para expandir
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Nova conta
+              </p>
+              <span className="text-slate-400 dark:text-slate-500 text-xs">↑ toque para expandir</span>
+            </div>
           )}
         </button>
         {!minimized && (
         <div className="px-4 pb-10 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex-1">Nova conta da família</h3>
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex-1">
+              {isEdit ? 'Editar conta da família' : 'Nova conta da família'}
+            </h3>
             <button type="button" onClick={onClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-lg leading-none flex-shrink-0"
               aria-label="Fechar">×</button>
@@ -379,7 +425,7 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
           </div>
           <button type="button" onClick={handleSave} disabled={!desc.trim() || !valor || saving}
             className="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-sm disabled:opacity-50">
-            {saving ? 'Salvando...' : 'Adicionar'}
+            {saving ? 'Salvando...' : (isEdit ? 'Salvar alterações' : 'Adicionar')}
           </button>
           {/* Espaço extra pra bottom nav não colar */}
           <div className="h-16" />
@@ -395,12 +441,13 @@ function NovoLancamentoSheet({ open, onClose, onSave }) {
 // ══════════════════════════════════════════════════════════════════════════════
 function FamiliaListScreen({
   familias, convitesPendentes, loading,
-  onEntrar, onCriar, onAceitar, onRecusar, isDark, toggleTheme,
+  onEntrar, onCriar, onEditar, onAceitar, onRecusar, isDark, toggleTheme,
 }) {
   const { user } = useAuth()
   const [showCriar, setShowCriar]     = useState(false)
   const [actionLoading, setActionLoad] = useState(null) // id do convite em loading
   const [resumos, setResumos]          = useState({}) // { familiaId: { receber, pagar } }
+  const [familiaEditando, setFamiliaEditando] = useState(null)
 
   // Carrega resumos do mês atual para todas as famílias (só a fatia do usuário)
   useEffect(() => {
@@ -468,41 +515,74 @@ function FamiliaListScreen({
                 {familias.map(f => {
                   const r = resumos[f.id] ?? { receber: 0, pagar: 0 }
                   const temResumo = r.receber > 0 || r.pagar > 0
+                  const isAdmin = f.meu_role === 'admin'
                   return (
-                    <button key={f.id} type="button" onClick={() => onEntrar(f.id)}
-                      className="w-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 px-5 py-4 text-left active:scale-[.98] transition-all shadow-sm hover:shadow-md">
+                    <div key={f.id}
+                      className="w-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 px-5 py-4 shadow-sm hover:shadow-md transition-all">
                       <div className="flex items-center gap-4">
-                        {/* Ícone customizado */}
-                        <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0">
-                          {f.icone || '👨‍👩‍👧‍👦'}
-                        </div>
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-base font-bold text-slate-800 dark:text-slate-100 truncate">{f.nome}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleColor(f.meu_role)}`}>
-                              {roleLabel(f.meu_role)}
-                            </span>
+                        {/* Ícone + Info + Seta — área principal clicável */}
+                        <button type="button" onClick={() => onEntrar(f.id)}
+                          className="flex items-center gap-4 flex-1 min-w-0 text-left active:scale-[.98] transition-transform">
+                          <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-3xl flex-shrink-0">
+                            {f.icone || '👨‍👩‍👧‍👦'}
                           </div>
-                        </div>
-                        {/* Seta */}
-                        <span className="text-slate-300 dark:text-slate-600 text-xl flex-shrink-0">›</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-bold text-slate-800 dark:text-slate-100 truncate">{f.nome}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleColor(f.meu_role)}`}>
+                                {roleLabel(f.meu_role)}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                        {/* Botão editar (admin) */}
+                        {isAdmin && (
+                          <button type="button"
+                            onClick={() => setFamiliaEditando(f)}
+                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors flex-shrink-0"
+                            aria-label="Editar família">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                        )}
+                        {/* Seta abre detalhe */}
+                        <button type="button" onClick={() => onEntrar(f.id)}
+                          className="text-slate-300 dark:text-slate-600 text-xl flex-shrink-0"
+                          aria-label="Abrir família">›</button>
                       </div>
 
-                      {/* Resumo financeiro do mês */}
-                      {temResumo && (
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                          <div className="flex-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl px-3 py-2 text-center">
-                            <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wide">A receber</p>
-                            <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(r.receber)}</p>
+                      {/* Resumo financeiro do mês (net da sua fatia) */}
+                      {temResumo && (() => {
+                        const net = r.receber - r.pagar
+                        const isReceiver = net > 0.01
+                        const isPayer    = net < -0.01
+                        return (
+                          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                            <div className={`rounded-xl px-4 py-2.5 text-center
+                              ${isReceiver
+                                ? 'bg-emerald-50 dark:bg-emerald-900/20'
+                                : isPayer
+                                  ? 'bg-amber-50 dark:bg-amber-900/20'
+                                  : 'bg-slate-50 dark:bg-slate-700/40'}`}>
+                              <p className={`text-[10px] font-bold uppercase tracking-wide
+                                ${isReceiver ? 'text-emerald-600 dark:text-emerald-400'
+                                  : isPayer ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-slate-400 dark:text-slate-500'}`}>
+                                {isReceiver ? 'A receber' : isPayer ? 'A pagar' : 'Quitado'}
+                              </p>
+                              <p className={`text-base font-extrabold mt-0.5
+                                ${isReceiver ? 'text-emerald-700 dark:text-emerald-400'
+                                  : isPayer ? 'text-amber-700 dark:text-amber-400'
+                                  : 'text-slate-500 dark:text-slate-400'}`}>
+                                {formatCurrency(Math.abs(net))}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2 text-center">
-                            <p className="text-[9px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wide">A pagar</p>
-                            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{formatCurrency(r.pagar)}</p>
-                          </div>
-                        </div>
-                      )}
-                    </button>
+                        )
+                      })()}
+                    </div>
                   )
                 })}
               </div>
@@ -550,6 +630,17 @@ function FamiliaListScreen({
           </>
         )}
       </div>
+
+      {/* Sheet de editar família (acessível direto da lista, sem precisar entrar) */}
+      <EditarFamiliaSheet
+        open={!!familiaEditando}
+        familia={familiaEditando}
+        onClose={() => setFamiliaEditando(null)}
+        onSave={async (updates) => {
+          if (!familiaEditando) return { error: 'sem família' }
+          return await onEditar(familiaEditando.id, updates)
+        }}
+      />
     </div>
   )
 }
@@ -614,6 +705,7 @@ function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
   const [linhas, setLinhas] = useState([])
   const [saving, setSaving] = useState(false)
   const [minimized, setMinimized] = useState(false)
+  const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
 
   useEffect(() => {
     if (!open || !lancamento) return
@@ -666,18 +758,34 @@ function DivisaoEditorSheet({ open, lancamento, membros, onClose, onSave }) {
         <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
       )}
 
-      <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe shadow-2xl transition-all duration-300
-        ${minimized ? 'max-h-[4.5rem] overflow-hidden' : 'max-h-[90dvh] overflow-y-auto'}`}>
+      <div
+        ref={sheetRef}
+        {...touchHandlers}
+        className={`fixed left-1/2 z-50 bg-white dark:bg-slate-800 shadow-2xl transition-all duration-300
+        ${minimized
+          ? 'rounded-3xl w-[calc(100%-2rem)] max-w-md max-h-[5.5rem] overflow-hidden'
+          : 'bottom-0 rounded-t-3xl w-full max-w-xl pb-safe max-h-[90dvh] overflow-y-auto'}`}
+        style={{
+          ...swipeStyle,
+          bottom: minimized
+            ? 'calc(env(safe-area-inset-bottom) + 5.5rem)'
+            : swipeStyle.bottom
+        }}>
 
         {/* Handle de minimizar/expandir (clicável) */}
         <button type="button" onClick={() => setMinimized(v => !v)}
-          className="w-full flex flex-col items-center pt-3 pb-2 active:bg-slate-50 dark:active:bg-slate-700/40"
+          className={`w-full flex flex-col items-center active:bg-slate-50 dark:active:bg-slate-700/40
+            ${minimized ? 'py-4 px-4' : 'pt-3 pb-2'}`}
           aria-label={minimized ? 'Expandir' : 'Minimizar'}>
-          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-500 rounded-full" />
+          <div className={`bg-slate-300 dark:bg-slate-500 rounded-full
+            ${minimized ? 'w-16 h-1.5 mb-2' : 'w-12 h-1.5'}`} />
           {minimized && (
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
-              Dividir conta · toque para expandir
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Dividir conta
+              </p>
+              <span className="text-slate-400 dark:text-slate-500 text-xs">↑ toque para expandir</span>
+            </div>
           )}
         </button>
 
@@ -801,6 +909,7 @@ function PagadorSheet({ open, lancamento, membros, onClose, onConfirm }) {
   const [selected, setSelected] = useState(null)
   const [saving, setSaving]     = useState(false)
   const [minimized, setMinimized] = useState(false)
+  const { sheetRef, swipeStyle, touchHandlers } = useSwipeDown(() => setMinimized(true), !minimized)
 
   useEffect(() => {
     if (open) {
@@ -825,16 +934,32 @@ function PagadorSheet({ open, lancamento, membros, onClose, onConfirm }) {
       {!minimized && (
         <div className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200" onClick={onClose} />
       )}
-      <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl z-50 pb-safe shadow-2xl transition-all duration-300
-        ${minimized ? 'max-h-[4.5rem] overflow-hidden' : 'max-h-[90dvh] overflow-y-auto'}`}>
+      <div
+        ref={sheetRef}
+        {...touchHandlers}
+        className={`fixed left-1/2 z-50 bg-white dark:bg-slate-800 shadow-2xl transition-all duration-300
+        ${minimized
+          ? 'rounded-3xl w-[calc(100%-2rem)] max-w-md max-h-[5.5rem] overflow-hidden'
+          : 'bottom-0 rounded-t-3xl w-full max-w-xl pb-safe max-h-[90dvh] overflow-y-auto'}`}
+        style={{
+          ...swipeStyle,
+          bottom: minimized
+            ? 'calc(env(safe-area-inset-bottom) + 5.5rem)'
+            : undefined
+        }}>
         <button type="button" onClick={() => setMinimized(v => !v)}
-          className="w-full flex flex-col items-center pt-3 pb-2 active:bg-slate-50 dark:active:bg-slate-700/40"
+          className={`w-full flex flex-col items-center active:bg-slate-50 dark:active:bg-slate-700/40
+            ${minimized ? 'py-4 px-4' : 'pt-3 pb-2'}`}
           aria-label={minimized ? 'Expandir' : 'Minimizar'}>
-          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-500 rounded-full" />
+          <div className={`bg-slate-300 dark:bg-slate-500 rounded-full
+            ${minimized ? 'w-16 h-1.5 mb-2' : 'w-12 h-1.5'}`} />
           {minimized && (
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1.5">
-              Quem pagou · toque para expandir
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Quem pagou
+              </p>
+              <span className="text-slate-400 dark:text-slate-500 text-xs">↑ toque para expandir</span>
+            </div>
           )}
         </button>
         {!minimized && (
@@ -919,6 +1044,7 @@ function FamiliaDetailScreen({
   const [showMembros, setShowMembros]   = useState(false)
   const [divisaoTarget, setDivisaoTarget] = useState(null) // lançamento sendo dividido
   const [pagadorTarget, setPagadorTarget] = useState(null) // lançamento para confirmar pagador
+  const [editingLancamento, setEditingLancamento] = useState(null) // lançamento sendo editado
   const [showSaldos, setShowSaldos]     = useState(false)
 
   // Fetch direto — usa familia.id da prop, nunca depende de familiaAtualId
@@ -941,9 +1067,28 @@ function FamiliaDetailScreen({
   const prevMonth = () => { if (month === 1) { setYear(y => y-1); setMonth(12) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setYear(y => y+1); setMonth(1) } else setMonth(m => m+1) }
 
-  // Wrapper: insere com divisão igualitária default e recarrega lista local
-  const handleAddLancamento = useCallback(async (payload) => {
+  // Wrapper: insere OU atualiza dependendo se está editando
+  const handleSaveLancamento = useCallback(async (payload) => {
     if (!familia?.id) { addToast('Família não encontrada.', 'error'); return { error: 'sem família' } }
+
+    if (editingLancamento) {
+      // EDIT — atualiza os campos mas preserva divisão, pago_por, etc.
+      const { data, error } = await supabase
+        .from('lancamentos_familia')
+        .update(payload)
+        .eq('id', editingLancamento.id)
+        .select()
+        .single()
+      if (error) { addToast(error.message, 'error'); return { error: error.message } }
+      setLancamentos(prev => prev.map(l =>
+        l.id === editingLancamento.id ? { ...l, ...data } : l
+      ).sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)))
+      setEditingLancamento(null)
+      addToast('Lançamento atualizado!', 'success')
+      return { error: null }
+    }
+
+    // INSERT — divisão igualitária default
     const divisao = divisaoIgualitaria(membros)
     const { data, error } = await supabase
       .from('lancamentos_familia')
@@ -961,7 +1106,7 @@ function FamiliaDetailScreen({
       [...prev, data].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
     )
     return { error: null }
-  }, [familia?.id, user, membros, addToast])
+  }, [familia?.id, user, membros, editingLancamento, addToast])
 
   // Salva nova divisão de um lançamento
   const handleSaveDivisao = useCallback(async (novaDivisao) => {
@@ -1041,17 +1186,29 @@ function FamiliaDetailScreen({
     onVoltar()
   }
 
+  // Totais da família (valores cheios — contexto geral)
   const totalEntradas = lancamentos.filter(l => l.tipo === 'Entrada').reduce((s,l) => s + Number(l.valor), 0)
   const totalSaidas   = lancamentos.filter(l => l.tipo === 'Saída').reduce((s,l) => s + Number(l.valor), 0)
-  const totalPendente = lancamentos.filter(l => l.tipo === 'Saída' && !l.pago).reduce((s,l) => s + Number(l.valor), 0)
 
-  // Saldos entre membros (Splitwise)
+  // Minha fatia das pendências (Splitwise — do MEU ponto de vista)
+  const minhaFatiaSaidasPendentes = lancamentos
+    .filter(l => l.tipo === 'Saída' && !l.pago)
+    .reduce((s, l) => s + minhaFatia(l, user.id).valor, 0)
+  const minhaFatiaEntradasPendentes = lancamentos
+    .filter(l => l.tipo === 'Entrada' && !l.pago)
+    .reduce((s, l) => s + minhaFatia(l, user.id).valor, 0)
+
+  // Saldos entre membros (Splitwise — contas já pagas, ajuste entre membros)
   const saldos = calcularSaldos(lancamentos, user.id)
   const saldosArray = Object.entries(saldos)
     .filter(([_, s]) => Math.abs(s.valor) > 0.01)
     .map(([uid, s]) => ({ user_id: uid, ...s }))
   const totalMeDevem  = saldosArray.filter(s => s.valor > 0).reduce((sum, s) => sum + s.valor, 0)
   const totalEuDevo   = saldosArray.filter(s => s.valor < 0).reduce((sum, s) => sum + Math.abs(s.valor), 0)
+
+  // NET do usuário: positivo = vai receber, negativo = vai pagar
+  // = (minhas entradas pendentes + me devem) - (minhas saídas pendentes + devo)
+  const meuNet = (minhaFatiaEntradasPendentes + totalMeDevem) - (minhaFatiaSaidasPendentes + totalEuDevo)
 
   return (
     <div className="min-h-screen bg-background flex flex-col page-enter">
@@ -1218,7 +1375,7 @@ function FamiliaDetailScreen({
           )}
         </div>
 
-        {/* Totais */}
+        {/* Totais da família (contexto geral, valores cheios) */}
         <div className="flex gap-3 px-4 mt-4">
           <div className="flex-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl px-3 py-2.5 text-center">
             <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">Entradas</p>
@@ -1228,11 +1385,46 @@ function FamiliaDetailScreen({
             <p className="text-[10px] text-red-500 dark:text-red-400 font-medium uppercase tracking-wide">Saídas</p>
             <p className="text-sm font-bold text-red-500 dark:text-red-400">{formatCurrency(totalSaidas)}</p>
           </div>
-          <div className="flex-1 bg-amber-50 dark:bg-amber-900/20 rounded-2xl px-3 py-2.5 text-center">
-            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wide">A pagar</p>
-            <p className="text-sm font-bold text-amber-600 dark:text-amber-400">{formatCurrency(totalPendente)}</p>
-          </div>
         </div>
+
+        {/* Saldo do usuário (Splitwise NET — minha parte líquida) */}
+        {(() => {
+          const isReceiver = meuNet > 0.01
+          const isPayer    = meuNet < -0.01
+          return (
+            <div className="mx-4 mt-3">
+              <div className={`rounded-2xl px-4 py-3 text-center border-2
+                ${isReceiver
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/40'
+                  : isPayer
+                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900/40'
+                    : 'bg-slate-50 dark:bg-slate-700/40 border-slate-200 dark:border-slate-700'}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-wide
+                  ${isReceiver ? 'text-emerald-700 dark:text-emerald-400'
+                    : isPayer ? 'text-amber-700 dark:text-amber-400'
+                    : 'text-slate-500 dark:text-slate-400'}`}>
+                  {isReceiver ? '↘ Você vai receber' : isPayer ? '↗ Você vai pagar' : '✓ Tudo quitado'}
+                </p>
+                <p className={`text-2xl font-extrabold mt-0.5
+                  ${isReceiver ? 'text-emerald-700 dark:text-emerald-400'
+                    : isPayer ? 'text-amber-700 dark:text-amber-400'
+                    : 'text-slate-500 dark:text-slate-400'}`}>
+                  {formatCurrency(Math.abs(meuNet))}
+                </p>
+                {(minhaFatiaEntradasPendentes > 0 || minhaFatiaSaidasPendentes > 0 || totalMeDevem > 0 || totalEuDevo > 0) && (
+                  <div className="flex items-center justify-center gap-3 mt-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium flex-wrap">
+                    {minhaFatiaEntradasPendentes > 0 && (
+                      <span>Sua fatia entradas: {formatCurrency(minhaFatiaEntradasPendentes)}</span>
+                    )}
+                    {minhaFatiaSaidasPendentes > 0 && (
+                      <span>Sua fatia saídas: {formatCurrency(minhaFatiaSaidasPendentes)}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Saldos entre membros (Splitwise) */}
         {saldosArray.length > 0 && (
@@ -1335,8 +1527,17 @@ function FamiliaDetailScreen({
                       <p className={`text-sm font-bold flex-shrink-0 ${isEntr ? 'text-emerald-500' : 'text-red-500'}`}>
                         {isEntr ? '+' : '-'}{formatCurrency(item.valor)}
                       </p>
+                      <button onClick={() => setEditingLancamento(item)}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+                        aria-label="Editar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
                       <button onClick={() => handleDelete(item.id)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                        aria-label="Excluir">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
                           <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
@@ -1385,7 +1586,12 @@ function FamiliaDetailScreen({
         +
       </button>
 
-      <NovoLancamentoSheet open={showAdd} onClose={() => setShowAdd(false)} onSave={handleAddLancamento} />
+      <NovoLancamentoSheet
+        open={showAdd || !!editingLancamento}
+        editingItem={editingLancamento}
+        onClose={() => { setShowAdd(false); setEditingLancamento(null) }}
+        onSave={handleSaveLancamento}
+      />
 
       <EditarFamiliaSheet
         open={showEditar}
@@ -1496,6 +1702,12 @@ export default function FamiliaPage({ onConviteHandled, initialDetalheId, onDeta
           toggleTheme={toggleTheme}
           onEntrar={entrar}
           onCriar={createFamilia}
+          onEditar={async (id, updates) => {
+            const r = await updateFamilia(id, updates)
+            if (r?.error) addToast(r.error, 'error')
+            else addToast('Família atualizada!', 'success')
+            return r
+          }}
           onAceitar={async (convite) => {
             const r = await aceitarConvite(convite)
             if (r?.error) { addToast(r.error, 'error'); return }
