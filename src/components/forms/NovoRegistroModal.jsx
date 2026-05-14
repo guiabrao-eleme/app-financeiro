@@ -310,27 +310,6 @@ export default function NovoRegistroModal({
     }
   }, [open])
 
-  // Quando minimizar: libera scroll do body (mas mantém posição do scroll travada)
-  useEffect(() => {
-    if (!open) return
-    if (minimized) {
-      // Salva onde o body estava travado e libera
-      const top = document.body.style.top
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      document.body.style.overflowY = ''
-      // Não fazer window.scrollTo aqui — manter posição atual visível
-      return () => {
-        // Quando re-expandir: trava de novo restaurando a posição salva
-        const scrollY = parseInt(top || '0') * -1
-        document.body.style.position = 'fixed'
-        document.body.style.top = top
-        document.body.style.width = '100%'
-        document.body.style.overflowY = 'scroll'
-      }
-    }
-  }, [open, minimized])
 
   useEffect(() => {
     if (!open) return

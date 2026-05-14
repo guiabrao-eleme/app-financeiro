@@ -72,23 +72,6 @@ function CardModal({ open, onClose, onSaved, onDeleted, editCard = null }) {
     }
   }, [open])
 
-  // Quando minimizar: libera body pra interagir com fundo
-  useEffect(() => {
-    if (!open) return
-    if (minimized) {
-      const top = document.body.style.top
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      document.body.style.overflowY = ''
-      return () => {
-        document.body.style.position = 'fixed'
-        document.body.style.top = top
-        document.body.style.width = '100%'
-        document.body.style.overflowY = 'scroll'
-      }
-    }
-  }, [open, minimized])
 
   if (!open) return null
 

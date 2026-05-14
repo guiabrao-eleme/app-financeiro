@@ -23,6 +23,18 @@ function AppRouter() {
   // ID da família para abrir direto no detalhe (deep-link de Registros)
   const [familiaInicial, setFamiliaInicial] = useState(null)
 
+  // Rede de segurança: garante que body fique destravado ao mudar de aba.
+  // Caso algum modal/sheet tenha deixado body com position:fixed por engano,
+  // isso restaura o scroll normal da página.
+  useEffect(() => {
+    if (showModal) return // se há modal ativo, deixa ele gerenciar
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.width = ''
+    document.body.style.overflowY = ''
+    document.body.style.overflow = ''
+  }, [appPage, showModal])
+
   // Navega para a aba Família já abrindo o detalhe de uma família específica
   const abrirFamilia = (familiaId) => {
     setFamiliaInicial(familiaId)
