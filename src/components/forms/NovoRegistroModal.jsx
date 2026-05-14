@@ -341,10 +341,16 @@ export default function NovoRegistroModal({
 
   const validate = () => {
     const errs = {}
+    // Sanitize and validate inputs
     if (!form.data) errs.data = 'Data obrigatória'
-    if (!form.descricao.trim()) errs.descricao = 'Descrição obrigatória'
+    else if (isNaN(Date.parse(form.data))) errs.data = 'Data inválida'
+
+    if (!form.descricao || !form.descricao.trim()) errs.descricao = 'Descrição obrigatória'
+    else if (form.descricao.length > 255) errs.descricao = 'Descrição muito longa (máx 255)'
+    else if (/[<>]/.test(form.descricao)) errs.descricao = 'Caracteres inválidos na descrição'
+
     if (!form.categoria) errs.categoria = 'Selecione uma categoria'
-    if (!form.valor || form.valor <= 0) errs.valor = 'Informe um valor válido'
+    if (!form.valor || isNaN(form.valor) || form.valor <= 0 || form.valor > 999999999) errs.valor = 'Informe um valor válido'
     return errs
   }
 
