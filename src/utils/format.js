@@ -17,7 +17,10 @@ const MONTHS = [
 ]
 
 export function formatMonthYear(year, month) {
-  return `${MONTHS[month - 1]} ${year}`
+  const m = parseInt(month)
+  const y = year || ''
+  if (isNaN(m) || m < 1 || m > 12) return `Mês inválido ${y}`.trim()
+  return `${MONTHS[m - 1]} ${y}`.trim()
 }
 
 export function getMonthRange(year, month) {
